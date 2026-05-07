@@ -4,10 +4,12 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SelectField } from '@/components/forms/SelectField';
 import { TextField } from '@/components/forms/TextField';
+import { useAuth } from '@/contexts/auth-context';
 import { registerWithRole } from '@/lib/firebase/auth';
 import type { UserRole } from '@/types/domain';
 
 export default function RegisterScreen() {
+  const { refreshProfile } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,6 +20,7 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       await registerWithRole({ name: name.trim(), email: email.trim(), password, role });
+      await refreshProfile();
       router.replace('/profile/setup');
     } catch (error) {
       Alert.alert(

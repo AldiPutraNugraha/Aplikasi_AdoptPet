@@ -28,22 +28,46 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [loading, setLoading] = useState(true);
 
   const refreshProfile = useCallback(async () => {
-    if (!firebaseAuth.currentUser) {
+    const currentUser = firebaseAuth.currentUser;
+
+    if (!currentUser) {
       setProfile(null);
       return;
     }
 
-    const nextProfile = await getUserProfile(firebaseAuth.currentUser.uid);
-    setProfile(nextProfile);
+    const nextProfile = await getUserProfile(currentUser.uid);
+
+    if (firebaseAuth.currentUser?.uid === currentUser.uid) {
+      setProfile(nextProfile);
+    }
   }, []);
 
   useEffect(() => {
-    return onAuthStateChanged(firebaseAuth, async (user) => {
+    let active = true;
+    let authRequestId = 0;
+
+    const unsubscribe = onAuthStateChanged(firebaseAuth, async (user) => {
+      const requestId = ++authRequestId;
       setFirebaseUser(user);
       setLoading(true);
-      setProfile(user ? await getUserProfile(user.uid) : null);
-      setLoading(false);
+      try {
+        const nextProfile = user ? await getUserProfile(user.uid) : null;
+
+        if (active && requestId === authRequestId) {
+          setProfile(nextProfile);
+        }
+      } finally {
+        if (active && requestId === authRequestId) {
+          setLoading(false);
+        }
+      }
     });
+
+    return () => {
+      active = false;
+      authRequestId += 1;
+      unsubscribe();
+    };
   }, []);
 
   const value = useMemo(

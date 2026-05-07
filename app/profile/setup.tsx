@@ -1,6 +1,6 @@
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { TextField } from '@/components/forms/TextField';
@@ -14,6 +14,14 @@ export default function ProfileSetupScreen() {
   const [fullAddress, setFullAddress] = useState(profile?.fullAddress ?? '');
   const [coordinates, setCoordinates] = useState<Coordinates | undefined>(profile?.coordinates);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!profile) return;
+
+    setPhoneNumber((current) => current || profile.phoneNumber || '');
+    setFullAddress((current) => current || profile.fullAddress || '');
+    setCoordinates((current) => current ?? profile.coordinates);
+  }, [profile]);
 
   async function useCurrentLocation() {
     const permission = await Location.requestForegroundPermissionsAsync();
@@ -30,7 +38,15 @@ export default function ProfileSetupScreen() {
   }
 
   async function onSubmit() {
-    if (!firebaseUser || !profile) return;
+    if (!firebaseUser) {
+      Alert.alert('Sesi tidak aktif', 'Silakan masuk kembali untuk melengkapi profil.');
+      return;
+    }
+
+    if (!profile) {
+      Alert.alert('Profil sedang dimuat', 'Tunggu sebentar, lalu coba simpan kembali.');
+      return;
+    }
 
     setSaving(true);
     try {
