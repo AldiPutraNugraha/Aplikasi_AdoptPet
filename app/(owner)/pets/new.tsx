@@ -8,7 +8,7 @@ import { TextField } from '@/components/forms/TextField';
 import { useAuth } from '@/contexts/auth-context';
 import { createPet } from '@/lib/firebase/pets';
 import { uploadImageAsync } from '@/lib/firebase/storage';
-import type { HealthStatus, PetSex } from '@/types/domain';
+import type { HealthStatus, Pet, PetSex } from '@/types/domain';
 
 const healthOptions: { label: string; value: HealthStatus }[] = [
   { label: 'Ya', value: 'yes' },
@@ -59,6 +59,11 @@ export default function NewPetScreen() {
       return;
     }
 
+    if (photoUris.length === 0) {
+      Alert.alert('Foto hewan belum ada', 'Tambahkan minimal satu foto hewan agar calon adopter bisa melihatnya.');
+      return;
+    }
+
     setSaving(true);
     try {
       const [photoUrls, healthProofUrls] = await Promise.all([
@@ -66,13 +71,13 @@ export default function NewPetScreen() {
         uploadSelectedImages(firebaseUser.uid, 'health-proofs', healthProofUris),
       ]);
 
-      await createPet({
+      const petPayload: Omit<Pet, 'id' | 'createdAt' | 'updatedAt'> = {
         ownerId: firebaseUser.uid,
         name: name.trim(),
         species: species.trim(),
-        estimatedBreed: estimatedBreed.trim() || undefined,
+        ...(estimatedBreed.trim() ? { estimatedBreed: estimatedBreed.trim() } : {}),
         primaryColor: primaryColor.trim(),
-        secondaryColor: secondaryColor.trim() || undefined,
+        ...(secondaryColor.trim() ? { secondaryColor: secondaryColor.trim() } : {}),
         furPattern: furPattern.trim(),
         age: age.trim(),
         sex,
@@ -83,9 +88,11 @@ export default function NewPetScreen() {
         medicalHistory: medicalHistory.trim(),
         healthProofUrls,
         fullAddress: profile.fullAddress,
-        coordinates: profile.coordinates,
+        ...(profile.coordinates ? { coordinates: profile.coordinates } : {}),
         status: 'available',
-      });
+      };
+
+      await createPet(petPayload);
 
       router.replace('/(owner)');
     } catch (error) {
