@@ -24,36 +24,34 @@ describe('sortByDistance', () => {
     ]);
 
     expect(result.map((item) => item.id)).toEqual(['cimahi', 'jakarta']);
-    expect(result[0].distanceKm).toBeLessThan(result[1].distanceKm);
+    expect(result[0].distanceKm).toBeDefined();
+    expect(result[1].distanceKm).toBeDefined();
+    expect(result[0].distanceKm as number).toBeLessThan(result[1].distanceKm as number);
   });
 
   it('keeps items without coordinates after items with distances', () => {
     const origin: Coordinates = { latitude: -6.9175, longitude: 107.6191 };
-    const result = sortByDistance(origin, [
+    const pets: Array<{ id: string; coordinates?: Coordinates }> = [
       { id: 'unknown' },
       { id: 'cimahi', coordinates: { latitude: -6.8722, longitude: 107.5425 } },
-    ]);
+    ];
+    const result = sortByDistance(origin, pets);
 
     expect(result.map((item) => item.id)).toEqual(['cimahi', 'unknown']);
     expect(result[0].distanceKm).toBeDefined();
     expect(result[1]).not.toHaveProperty('distanceKm');
   });
 
-  it('treats two missing distances as equivalent in the comparator', () => {
+  it('preserves the relative order of items when both distances are missing', () => {
     const origin: Coordinates = { latitude: -6.9175, longitude: 107.6191 };
-    const originalSort = Array.prototype.sort;
-    let comparator: Parameters<typeof originalSort>[0];
+    const pets: Array<{ id: string; coordinates?: Coordinates }> = [
+      { id: 'first' },
+      { id: 'second' },
+      { id: 'third' },
+    ];
+    const result = sortByDistance(origin, pets);
 
-    const sortSpy = jest.spyOn(Array.prototype, 'sort').mockImplementation(function (compareFn) {
-      comparator = compareFn;
-      return originalSort.call(this, compareFn);
-    });
-
-    sortByDistance(origin, [{ id: 'first' }, { id: 'second' }]);
-
-    const result = comparator?.({ id: 'first' }, { id: 'second' });
-    sortSpy.mockRestore();
-
-    expect(result).toBe(0);
+    expect(result.map((item) => item.id)).toEqual(['first', 'second', 'third']);
+    expect(result.every((item) => !('distanceKm' in item))).toBe(true);
   });
 });
