@@ -10,7 +10,7 @@ export async function registerPushToken(userId: string) {
     return null;
   }
 
-  const token = await Notifications.getExpoPushTokenAsync();
+  const token = await Notifications.getDevicePushTokenAsync();
   await updateDoc(doc(firestore, 'users', userId), {
     fcmToken: token.data,
     updatedAt: serverTimestamp(),
