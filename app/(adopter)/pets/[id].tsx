@@ -1,6 +1,6 @@
 import { Link, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { PetHealthSummary } from '@/components/pets/PetHealthSummary';
 import { PetMap } from '@/components/pets/PetMap';
@@ -16,16 +16,23 @@ export default function PetDetailScreen() {
   const petId = Array.isArray(id) ? id[0] : id;
   const [pet, setPet] = useState<Pet | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [heroImageError, setHeroImageError] = useState(false);
 
   const loadPet = useCallback(async () => {
     if (!petId) {
+      setError(null);
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    setError(null);
     try {
       setPet(await getPetById(petId));
+    } catch {
+      setError('Gagal memuat detail hewan. Periksa koneksi lalu coba lagi.');
+      setPet(null);
     } finally {
       setLoading(false);
     }
@@ -35,11 +42,27 @@ export default function PetDetailScreen() {
     void loadPet();
   }, [loadPet]);
 
+  useEffect(() => {
+    setHeroImageError(false);
+  }, [pet?.id]);
+
   if (loading) {
     return (
       <View style={styles.centerState}>
         <ActivityIndicator color="#0f766e" />
         <Text style={styles.stateText}>Memuat detail hewan...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centerState}>
+        <Text style={styles.emptyTitle}>Tidak bisa memuat detail</Text>
+        <Text style={styles.emptyBody}>{error}</Text>
+        <Pressable accessibilityRole="button" onPress={loadPet} style={styles.retryButton}>
+          <Text style={styles.retryButtonText}>Coba lagi</Text>
+        </Pressable>
       </View>
     );
   }
@@ -54,12 +77,13 @@ export default function PetDetailScreen() {
   }
 
   const imageUri = firstPhotoUrl(pet.photoUrls);
+  const shouldShowHeroImage = imageUri && !heroImageError;
   const breedLine = [pet.species, pet.estimatedBreed].filter(Boolean).join(' / ');
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {imageUri ? (
-        <Image source={{ uri: imageUri }} style={styles.heroImage} resizeMode="cover" />
+      {shouldShowHeroImage ? (
+        <Image source={{ uri: imageUri }} style={styles.heroImage} resizeMode="cover" onError={() => setHeroImageError(true)} />
       ) : (
         <View style={styles.heroPlaceholder}>
           <Text style={styles.placeholderText}>Foto belum tersedia</Text>
@@ -130,4 +154,11 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { color: '#0f172a', fontSize: 20, fontWeight: '800', textAlign: 'center' },
   emptyBody: { color: '#64748b', fontSize: 15, lineHeight: 22, textAlign: 'center' },
+  retryButton: {
+    borderRadius: 8,
+    backgroundColor: '#0f766e',
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  retryButtonText: { color: '#ffffff', fontSize: 15, fontWeight: '800' },
 });

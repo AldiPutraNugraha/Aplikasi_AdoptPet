@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Pet } from '@/types/domain';
@@ -16,15 +17,20 @@ function firstPhotoUrl(photoUrls?: string[]) {
 
 export function PetCard({ pet, onPress }: Props) {
   const imageUri = firstPhotoUrl(pet.photoUrls);
+  const [imageError, setImageError] = useState(false);
   const colorPattern = [pet.species, pet.primaryColor, pet.furPattern].filter(Boolean).join(' / ');
+
+  useEffect(() => {
+    setImageError(false);
+  }, [imageUri]);
 
   return (
     <Pressable
       accessibilityRole={onPress ? 'button' : undefined}
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && onPress ? styles.cardPressed : null]}>
-      {imageUri ? (
-        <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
+      {imageUri && !imageError ? (
+        <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" onError={() => setImageError(true)} />
       ) : (
         <View style={styles.placeholder}>
           <Text style={styles.placeholderText}>Foto belum tersedia</Text>

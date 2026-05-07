@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 
 import type { Coordinates } from '@/types/domain';
@@ -14,6 +14,15 @@ export function PetMap({ coordinates, title = 'Lokasi hewan' }: Props) {
       <View style={[styles.map, styles.unavailable]}>
         <Text style={styles.unavailableTitle}>Lokasi belum tersedia</Text>
         <Text style={styles.unavailableBody}>Pemilik belum menambahkan titik peta untuk hewan ini.</Text>
+      </View>
+    );
+  }
+
+  if (Platform.OS === 'web') {
+    return (
+      <View style={[styles.map, styles.unavailable]}>
+        <Text style={styles.unavailableTitle}>Peta tidak tersedia di web</Text>
+        <Text style={styles.unavailableBody}>Buka aplikasi mobile untuk melihat titik lokasi hewan.</Text>
       </View>
     );
   }

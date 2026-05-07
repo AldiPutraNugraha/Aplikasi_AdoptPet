@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PetCard } from '@/components/pets/PetCard';
 import { listAvailablePets } from '@/lib/firebase/pets';
@@ -9,11 +9,16 @@ import type { Pet } from '@/types/domain';
 export default function AdopterHomeScreen() {
   const [pets, setPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const loadPets = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       setPets(await listAvailablePets());
+    } catch {
+      setError('Gagal memuat hewan tersedia. Periksa koneksi lalu coba lagi.');
+      setPets([]);
     } finally {
       setLoading(false);
     }
@@ -28,6 +33,18 @@ export default function AdopterHomeScreen() {
       <View style={styles.centerState}>
         <ActivityIndicator color="#0f766e" />
         <Text style={styles.stateText}>Memuat hewan tersedia...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centerState}>
+        <Text style={styles.emptyTitle}>Tidak bisa memuat hewan</Text>
+        <Text style={styles.emptyBody}>{error}</Text>
+        <Pressable accessibilityRole="button" onPress={loadPets} style={styles.retryButton}>
+          <Text style={styles.retryButtonText}>Coba lagi</Text>
+        </Pressable>
       </View>
     );
   }
@@ -71,4 +88,11 @@ const styles = StyleSheet.create({
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 24 },
   emptyTitle: { color: '#0f172a', fontSize: 18, fontWeight: '800', textAlign: 'center' },
   emptyBody: { color: '#64748b', fontSize: 15, lineHeight: 22, textAlign: 'center' },
+  retryButton: {
+    borderRadius: 8,
+    backgroundColor: '#0f766e',
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  retryButtonText: { color: '#ffffff', fontSize: 15, fontWeight: '800' },
 });
