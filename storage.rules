@@ -6,13 +6,25 @@ service firebase.storage {
       return request.auth != null;
     }
 
+    function validImageUpload() {
+      return request.resource != null
+        && request.resource.size > 0
+        && request.resource.size <= 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
     match /users/{userId}/{allPaths=**} {
-      allow read, write: if signedIn() && request.auth.uid == userId;
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow write: if signedIn()
+        && request.auth.uid == userId
+        && validImageUpload();
     }
 
     match /pets/{ownerId}/{allPaths=**} {
       allow read: if signedIn();
-      allow write: if signedIn() && request.auth.uid == ownerId;
+      allow write: if signedIn()
+        && request.auth.uid == ownerId
+        && validImageUpload();
     }
 
     match /reports/{adopterId}/{reportId}/{allPaths=**} {
@@ -24,16 +36,14 @@ service firebase.storage {
       allow write: if signedIn()
         && request.auth.uid == adopterId
         && firestore.get(/databases/(default)/documents/postAdoptionReports/$(reportId)).data.adopterId == request.auth.uid
-        && request.resource.size < 8 * 1024 * 1024
-        && request.resource.contentType.matches('image/.*');
+        && validImageUpload();
     }
 
     match /search/{userId}/{allPaths=**} {
       allow read: if signedIn() && request.auth.uid == userId;
       allow write: if signedIn()
         && request.auth.uid == userId
-        && request.resource.size < 8 * 1024 * 1024
-        && request.resource.contentType.matches('image/.*');
+        && validImageUpload();
     }
   }
 }

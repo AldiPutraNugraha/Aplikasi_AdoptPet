@@ -21,8 +21,23 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow create: if isSelf(userId);
-      allow read, update: if isSelf(userId);
+      allow create: if isSelf(userId)
+        && request.resource.data.id == userId
+        && request.resource.data.role in ['owner', 'adopter']
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.email is string
+        && request.resource.data.phoneNumber is string
+        && request.resource.data.fullAddress is string
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow read: if isSelf(userId);
+      allow update: if isSelf(userId)
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time;
     }
 
     match /pets/{petId} {

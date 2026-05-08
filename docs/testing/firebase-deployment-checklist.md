@@ -1,0 +1,27 @@
+# Firebase Deployment Checklist
+
+- Firebase project is created.
+- Android app is registered in Firebase.
+- `.env` contains Expo public Firebase keys.
+- Google Maps API key is enabled for Android Maps SDK.
+- OpenRouter API key is configured as a Firebase Functions secret.
+- Firestore rules are deployed.
+- Storage rules are deployed.
+- Firestore composite indexes are deployed.
+- Functions are built successfully.
+- `analyzePetImage` is deployed.
+- Scheduled monitoring functions are deployed.
+- FCM or device push notification permission is configured for the Android build.
+- Test owner account can register.
+- Test adopter account can register.
+- Owner can complete a profile with phone number, full address, and coordinates.
+- Adopter can complete a profile with phone number, full address, and coordinates.
+- Owner can create a pet post with image upload.
+- Adopter can browse available pets.
+- Adopter can run manual search.
+- Adopter can run visual search.
+- Adopter can submit the adoption screening form.
+- Owner can accept an adoption request.
+- Monitoring report is created after approval.
+- Adopter can submit the one-month monitoring report.
+- Owner can view submitted monitoring status.
