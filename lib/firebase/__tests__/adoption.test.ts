@@ -108,10 +108,16 @@ describe('updateRequestDecision', () => {
 
   it('writes owner decisions in the same transaction after confirming pending status', async () => {
     const transaction = {
-      get: jest.fn().mockResolvedValue({
-        exists: () => true,
-        data: () => ({ status: 'pending' }),
-      }),
+      get: jest
+        .fn()
+        .mockResolvedValueOnce({
+          exists: () => true,
+          data: () => ({ status: 'pending', petId: 'pet-1', ownerId: 'owner-1', adopterId: 'adopter-1' }),
+        })
+        .mockResolvedValueOnce({
+          exists: () => true,
+          data: () => ({ ownerId: 'owner-1', status: 'available' }),
+        }),
       update: jest.fn(),
     };
     (runTransaction as jest.Mock).mockImplementation(async (_firestore, callback) => callback(transaction));
@@ -131,6 +137,71 @@ describe('updateRequestDecision', () => {
         decidedAt: 'SERVER_TIME',
       },
     );
+    expect(transaction.update).toHaveBeenCalledWith(
+      { id: 'pet-1', path: 'pets/pet-1' },
+      {
+        status: 'adopted',
+        adoptedById: 'adopter-1',
+        adoptedRequestId: 'request-1',
+        updatedAt: 'SERVER_TIME',
+      },
+    );
+  });
+
+  it('rejects accepting a request when the pet is no longer available', async () => {
+    const transaction = {
+      get: jest
+        .fn()
+        .mockResolvedValueOnce({
+          exists: () => true,
+          data: () => ({ status: 'pending', petId: 'pet-1', ownerId: 'owner-1', adopterId: 'adopter-1' }),
+        })
+        .mockResolvedValueOnce({
+          exists: () => true,
+          data: () => ({ ownerId: 'owner-1', status: 'adopted' }),
+        }),
+      update: jest.fn(),
+    };
+    (runTransaction as jest.Mock).mockImplementation(async (_firestore, callback) => callback(transaction));
+
+    await expect(
+      updateRequestDecision({
+        requestId: 'request-1',
+        currentStatus: 'pending',
+        status: 'accepted',
+        ownerNote: 'Silakan lanjut WhatsApp',
+      }),
+    ).rejects.toThrow('tidak tersedia');
+
+    expect(transaction.update).not.toHaveBeenCalled();
+  });
+
+  it('writes rejection decisions without changing pet status', async () => {
+    const transaction = {
+      get: jest.fn().mockResolvedValue({
+        exists: () => true,
+        data: () => ({ status: 'pending' }),
+      }),
+      update: jest.fn(),
+    };
+    (runTransaction as jest.Mock).mockImplementation(async (_firestore, callback) => callback(transaction));
+
+    await updateRequestDecision({
+      requestId: 'request-1',
+      currentStatus: 'pending',
+      status: 'rejected',
+      ownerNote: ' Belum cocok ',
+    });
+
+    expect(transaction.update).toHaveBeenCalledWith(
+      { id: 'request-1', path: 'adoptionRequests/request-1' },
+      {
+        status: 'rejected',
+        ownerNote: 'Belum cocok',
+        decidedAt: 'SERVER_TIME',
+      },
+    );
+    expect(transaction.update).toHaveBeenCalledTimes(1);
   });
 });
 

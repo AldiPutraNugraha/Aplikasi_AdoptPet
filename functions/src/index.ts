@@ -1,4 +1,5 @@
 import * as admin from 'firebase-admin';
+import { defineSecret } from 'firebase-functions/params';
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
@@ -17,6 +18,7 @@ import { analyzeImageWithOpenRouter } from './openrouter';
 admin.initializeApp();
 
 const MODEL = 'google/gemini-2.5-flash';
+const openRouterApiKey = defineSecret('OPENROUTER_API_KEY');
 
 async function writeAiSearchLog(data: Record<string, unknown>) {
   await admin.firestore().collection('aiSearchLogs').add({
@@ -93,7 +95,7 @@ function toDate(value: unknown) {
   return undefined;
 }
 
-export const analyzePetImage = onCall({ region: 'asia-southeast2' }, async (request) => {
+export const analyzePetImage = onCall({ region: 'asia-southeast2', secrets: [openRouterApiKey] }, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Login diperlukan untuk pencarian visual.');
   }
@@ -105,7 +107,7 @@ export const analyzePetImage = onCall({ region: 'asia-southeast2' }, async (requ
     throw new HttpsError('invalid-argument', 'Foto referensi belum valid.');
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = openRouterApiKey.value();
   if (!apiKey) {
     throw new HttpsError('failed-precondition', 'OpenRouter API key belum dikonfigurasi.');
   }
@@ -163,9 +165,17 @@ export const createAdoptionApproval = onDocumentUpdated(
       const reportRef = firestore.collection('postAdoptionReports').doc(requestId);
       const existingReport = await transaction.get(reportRef);
       const petRef = firestore.collection('pets').doc(after.petId);
+      const petSnapshot = await transaction.get(petRef);
+      const pet = petSnapshot.exists ? petSnapshot.data() : undefined;
+
+      if (pet?.adoptedRequestId && pet.adoptedRequestId !== requestId) {
+        return;
+      }
 
       transaction.update(petRef, {
         status: 'adopted',
+        adoptedById: after.adopterId,
+        adoptedRequestId: requestId,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 

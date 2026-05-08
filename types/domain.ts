@@ -61,6 +61,8 @@ export type Pet = {
   fullAddress: string;
   coordinates?: Coordinates;
   status: PetStatus;
+  adoptedById?: string;
+  adoptedRequestId?: string;
   aiAttributes?: VisualAttributes;
   createdAt: number;
   updatedAt: number;

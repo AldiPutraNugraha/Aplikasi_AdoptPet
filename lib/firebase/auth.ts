@@ -1,6 +1,7 @@
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 
+import { normalizeProfileDetails } from '@/lib/domain/profile';
 import { firebaseAuth, firestore } from '@/lib/firebase/client';
 import { unregisterPushToken } from '@/lib/firebase/notifications';
 import type { AppUser, Coordinates, UserRole } from '@/types/domain';
@@ -84,8 +85,10 @@ export function updateProfileDetails(
   userId: string,
   input: { phoneNumber: string; fullAddress: string; coordinates?: Coordinates },
 ) {
+  const details = normalizeProfileDetails(input);
+
   return updateDoc(doc(firestore, 'users', userId), {
-    ...input,
+    ...details,
     updatedAt: serverTimestamp(),
   });
 }

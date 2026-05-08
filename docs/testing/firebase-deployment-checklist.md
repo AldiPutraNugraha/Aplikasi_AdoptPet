@@ -4,7 +4,7 @@
 - Android app is registered in Firebase.
 - `.env` contains Expo public Firebase keys.
 - Google Maps API key is enabled for Android Maps SDK.
-- OpenRouter API key is configured as a Firebase Functions secret.
+- Firebase Functions secret `OPENROUTER_API_KEY` is created and attached to `analyzePetImage`.
 - Firestore rules are deployed.
 - Storage rules are deployed.
 - Firestore composite indexes are deployed.

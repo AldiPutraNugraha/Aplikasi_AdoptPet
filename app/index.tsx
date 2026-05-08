@@ -18,7 +18,7 @@ export default function IndexScreen() {
     return <Redirect href="/auth/login" />;
   }
 
-  if (!profile?.phoneNumber || !profile.fullAddress) {
+  if (!profile?.phoneNumber.trim() || !profile.fullAddress.trim()) {
     return <Redirect href="/profile/setup" />;
   }
 

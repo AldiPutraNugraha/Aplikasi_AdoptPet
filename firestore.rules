@@ -20,6 +20,60 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'adopter';
     }
 
+    function hasCompletedProfile(data) {
+      return data.phoneNumber is string
+        && data.phoneNumber.matches('.*[0-9].*')
+        && data.fullAddress is string
+        && data.fullAddress.matches('.*[A-Za-z0-9].*');
+    }
+
+    function isEditablePetDetailsUpdate() {
+      return request.resource.data.status == resource.data.status
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name',
+          'species',
+          'estimatedBreed',
+          'primaryColor',
+          'secondaryColor',
+          'furPattern',
+          'age',
+          'sex',
+          'description',
+          'photoUrls',
+          'vaccinationStatus',
+          'sterilizationStatus',
+          'medicalHistory',
+          'healthProofUrls',
+          'fullAddress',
+          'coordinates',
+          'aiAttributes',
+          'updatedAt'
+        ])
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function isAdoptionPetTransition(petId) {
+      let requestId = request.resource.data.adoptedRequestId;
+      let requestPath = /databases/$(database)/documents/adoptionRequests/$(requestId);
+
+      return resource.data.status == 'available'
+        && request.resource.data.status == 'adopted'
+        && request.resource.data.adoptedById is string
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status',
+          'adoptedById',
+          'adoptedRequestId',
+          'updatedAt'
+        ])
+        && request.resource.data.updatedAt == request.time
+        && get(requestPath).data.status == 'pending'
+        && get(requestPath).data.petId == petId
+        && get(requestPath).data.ownerId == request.auth.uid
+        && get(requestPath).data.adopterId == request.resource.data.adoptedById
+        && getAfter(requestPath).data.status == 'accepted'
+        && getAfter(requestPath).data.decidedAt == request.time;
+    }
+
     match /users/{userId} {
       allow create: if isSelf(userId)
         && request.resource.data.id == userId
@@ -37,13 +91,28 @@ service cloud.firestore {
         && request.resource.data.email == resource.data.email
         && request.resource.data.role == resource.data.role
         && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.updatedAt == request.time;
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'phoneNumber',
+          'fullAddress',
+          'coordinates',
+          'fcmToken',
+          'updatedAt'
+        ])
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['phoneNumber', 'fullAddress'])
+          || hasCompletedProfile(request.resource.data)
+        );
     }
 
     match /pets/{petId} {
       allow read: if signedIn();
       allow create: if isOwner() && request.resource.data.ownerId == request.auth.uid;
-      allow update: if isOwner() && resource.data.ownerId == request.auth.uid;
+      allow update: if isOwner()
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (isEditablePetDetailsUpdate() || isAdoptionPetTransition(petId));
     }
 
     match /adoptionRequests/{requestId} {
@@ -86,7 +155,16 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'ownerNote', 'decidedAt'])
         && request.resource.data.status in ['accepted', 'rejected']
         && request.resource.data.ownerNote is string
-        && request.resource.data.decidedAt == request.time;
+        && request.resource.data.decidedAt == request.time
+        && (
+          request.resource.data.status == 'rejected'
+          || (
+            get(/databases/$(database)/documents/pets/$(resource.data.petId)).data.status == 'available'
+            && getAfter(/databases/$(database)/documents/pets/$(resource.data.petId)).data.status == 'adopted'
+            && getAfter(/databases/$(database)/documents/pets/$(resource.data.petId)).data.adoptedById == resource.data.adopterId
+            && getAfter(/databases/$(database)/documents/pets/$(resource.data.petId)).data.adoptedRequestId == requestId
+          )
+        );
     }
 
     match /postAdoptionReports/{reportId} {

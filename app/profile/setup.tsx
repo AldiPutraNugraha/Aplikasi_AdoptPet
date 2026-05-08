@@ -5,6 +5,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { TextField } from '@/components/forms/TextField';
 import { useAuth } from '@/contexts/auth-context';
+import { validateProfileDetails } from '@/lib/domain/profile';
 import { updateProfileDetails } from '@/lib/firebase/auth';
 import type { Coordinates } from '@/types/domain';
 
@@ -48,9 +49,18 @@ export default function ProfileSetupScreen() {
       return;
     }
 
+    const validation = validateProfileDetails({ phoneNumber, fullAddress, coordinates });
+    if (!validation.valid) {
+      Alert.alert(
+        'Profil belum lengkap',
+        validation.errors.phoneNumber ?? validation.errors.fullAddress ?? 'Periksa kembali profil.',
+      );
+      return;
+    }
+
     setSaving(true);
     try {
-      await updateProfileDetails(firebaseUser.uid, { phoneNumber, fullAddress, coordinates });
+      await updateProfileDetails(firebaseUser.uid, validation.details);
       await refreshProfile();
       router.replace(profile.role === 'owner' ? '/(owner)' : '/(adopter)');
     } catch (error) {

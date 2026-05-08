@@ -138,6 +138,27 @@ export async function updateRequestDecision(input: {
       throw new Error('Pengajuan ini sudah memiliki keputusan.');
     }
 
+    if (input.status === 'accepted') {
+      const petRef = doc(firestore, 'pets', request.petId as string);
+      const petSnapshot = await transaction.get(petRef);
+
+      if (!petSnapshot.exists()) {
+        throw new Error('Hewan tidak ditemukan.');
+      }
+
+      const pet = petSnapshot.data() as Partial<Pet>;
+      if (pet.ownerId !== request.ownerId || pet.status !== 'available') {
+        throw new Error('Hewan ini tidak tersedia untuk disetujui.');
+      }
+
+      transaction.update(petRef, {
+        status: 'adopted',
+        adoptedById: request.adopterId,
+        adoptedRequestId: input.requestId,
+        updatedAt: serverTimestamp(),
+      });
+    }
+
     transaction.update(requestRef, {
       status: input.status,
       ownerNote: input.ownerNote.trim(),
