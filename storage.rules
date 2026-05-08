@@ -15,8 +15,17 @@ service firebase.storage {
       allow write: if signedIn() && request.auth.uid == ownerId;
     }
 
-    match /reports/{adopterId}/{allPaths=**} {
-      allow read, write: if signedIn() && request.auth.uid == adopterId;
+    match /reports/{adopterId}/{reportId}/{allPaths=**} {
+      allow read: if signedIn()
+        && (
+          request.auth.uid == adopterId
+          || firestore.get(/databases/(default)/documents/postAdoptionReports/$(reportId)).data.ownerId == request.auth.uid
+        );
+      allow write: if signedIn()
+        && request.auth.uid == adopterId
+        && firestore.get(/databases/(default)/documents/postAdoptionReports/$(reportId)).data.adopterId == request.auth.uid
+        && request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
     }
 
     match /search/{userId}/{allPaths=**} {

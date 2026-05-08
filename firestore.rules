@@ -77,8 +77,23 @@ service cloud.firestore {
     match /postAdoptionReports/{reportId} {
       allow read: if signedIn()
         && (resource.data.ownerId == request.auth.uid || resource.data.adopterId == request.auth.uid);
-      allow create, update: if signedIn()
-        && request.resource.data.adopterId == request.auth.uid;
+      allow create: if false;
+      allow update: if signedIn()
+        && resource.data.adopterId == request.auth.uid
+        && resource.data.status in ['due', 'late']
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'conditionPhotoPaths',
+          'conditionNote',
+          'status',
+          'submittedAt'
+        ])
+        && request.resource.data.status == 'submitted'
+        && request.resource.data.conditionPhotoPaths is list
+        && request.resource.data.conditionPhotoPaths.size() == 1
+        && request.resource.data.conditionPhotoPaths[0] is string
+        && request.resource.data.conditionPhotoPaths[0].matches('reports/' + request.auth.uid + '/' + reportId + '/.*')
+        && request.resource.data.conditionNote is string
+        && request.resource.data.submittedAt == request.time;
     }
 
     match /aiSearchLogs/{logId} {

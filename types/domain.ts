@@ -94,7 +94,8 @@ export type PostAdoptionReport = {
   adopterId: string;
   dueAt: number;
   status: MonitoringReportStatus;
-  conditionPhotoUrls: string[];
+  conditionPhotoPaths: string[];
+  conditionPhotoUrls?: string[];
   conditionNote?: string;
   submittedAt?: number;
   createdAt: number;
