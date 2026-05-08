@@ -2,6 +2,7 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } f
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 
 import { firebaseAuth, firestore } from '@/lib/firebase/client';
+import { unregisterPushToken } from '@/lib/firebase/notifications';
 import type { AppUser, Coordinates, UserRole } from '@/types/domain';
 
 type FirestoreTimestampLike = {
@@ -62,7 +63,15 @@ export function login(email: string, password: string) {
   return signInWithEmailAndPassword(firebaseAuth, email, password);
 }
 
-export function logout() {
+export async function logout() {
+  const userId = firebaseAuth.currentUser?.uid;
+
+  if (userId) {
+    await unregisterPushToken(userId).catch(() => {
+      // Logout should still work if token cleanup is unavailable.
+    });
+  }
+
   return signOut(firebaseAuth);
 }
 

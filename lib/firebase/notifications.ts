@@ -1,5 +1,5 @@
 import * as Notifications from 'expo-notifications';
-import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { deleteField, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 
 import { firestore } from '@/lib/firebase/client';
 
@@ -17,4 +17,11 @@ export async function registerPushToken(userId: string) {
   });
 
   return token.data;
+}
+
+export function unregisterPushToken(userId: string) {
+  return updateDoc(doc(firestore, 'users', userId), {
+    fcmToken: deleteField(),
+    updatedAt: serverTimestamp(),
+  });
 }

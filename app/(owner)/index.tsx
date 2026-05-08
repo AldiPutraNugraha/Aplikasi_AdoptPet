@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuth } from '@/contexts/auth-context';
+import { logout } from '@/lib/firebase/auth';
 import { listOwnerPets } from '@/lib/firebase/pets';
 import type { Pet } from '@/types/domain';
 
@@ -51,9 +52,14 @@ export default function OwnerHomeScreen() {
           <Text style={styles.eyebrow}>Pelepas Hewan</Text>
           <Text style={styles.title}>Hewan Saya</Text>
         </View>
-        <Pressable style={styles.addButton} onPress={() => router.push('/(owner)/pets/new')}>
-          <Text style={styles.addButtonText}>Tambah</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable style={styles.logoutButton} onPress={logout}>
+            <Text style={styles.logoutText}>Keluar</Text>
+          </Pressable>
+          <Pressable style={styles.addButton} onPress={() => router.push('/(owner)/pets/new')}>
+            <Text style={styles.addButtonText}>Tambah</Text>
+          </Pressable>
+        </View>
       </View>
 
       {loading ? (
@@ -107,10 +113,19 @@ const styles = StyleSheet.create({
   screen: { flex: 1, gap: 18, padding: 20, backgroundColor: '#f8fafc' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 14 },
   headerText: { flex: 1, gap: 2 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   eyebrow: { color: '#64748b', fontSize: 13, fontWeight: '700', textTransform: 'uppercase' },
   title: { color: '#0f766e', fontSize: 28, fontWeight: '800' },
   addButton: { borderRadius: 8, backgroundColor: '#0f766e', paddingHorizontal: 16, paddingVertical: 11 },
   addButtonText: { color: '#ffffff', fontWeight: '800' },
+  logoutButton: {
+    borderWidth: 1,
+    borderColor: '#0f766e',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  logoutText: { color: '#0f766e', fontWeight: '800' },
   state: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
   stateText: { color: '#475569', fontSize: 15 },
   emptyState: {
