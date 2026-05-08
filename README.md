@@ -1,50 +1,62 @@
-# Welcome to your Expo app 👋
+# AdoptPet
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+AdoptPet is a React Native and Expo Android application for pet adoption. It uses Firebase for online backend services, Google Maps for location features, and OpenRouter `google/gemini-2.5-flash` for image-based pet attribute recognition.
 
-## Get started
+## Main Features
 
-1. Install dependencies
+- Fixed user roles: Pelepas Hewan and Calon Pengadopsi
+- Online authentication and user profile setup with full address and coordinates
+- Pet posting with photos, health information, and proof uploads
+- Manual pet search by species and primary color
+- Visual pet search using OpenRouter Gemini model
+- Distance sorting with the Haversine Formula
+- Adoption screening form before request submission
+- Owner approval or rejection workflow
+- One-month post-adoption monitoring report
+- Push token registration for adoption and monitoring reminders
 
-   ```bash
-   npm install
-   ```
+## Online Services
 
-2. Start the app
+- Firebase Authentication for owner and adopter accounts
+- Cloud Firestore for users, pets, adoption requests, AI search logs, and monitoring reports
+- Firebase Storage for pet photos, visual-search references, and monitoring report images
+- Firebase Cloud Functions for OpenRouter access and scheduled monitoring jobs
+- Google Maps for location display and coordinate-based distance features
 
-   ```bash
-   npx expo start
-   ```
+## Environment
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+Copy `.env.example` to `.env` and fill in the Expo public Firebase and Google Maps keys:
 
 ```bash
-npm run reset-project
+EXPO_PUBLIC_FIREBASE_API_KEY=
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+EXPO_PUBLIC_FIREBASE_APP_ID=
+EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+The OpenRouter API key must be configured as a Firebase Functions secret, not as a public mobile app environment variable.
 
-## Learn more
+## Development
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+npm install
+npm run android
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Tests
 
-## Join the community
+```bash
+npm test
+npm run lint
+npm run build --prefix functions
+```
 
-Join our community of developers creating universal apps.
+## Documentation
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- Design spec: `docs/superpowers/specs/2026-05-07-adoptpet-online-design.md`
+- Implementation plan: `docs/superpowers/plans/2026-05-07-adoptpet-online-mvp.md`
+- Firebase deployment checklist: `docs/testing/firebase-deployment-checklist.md`
+- Black Box Testing: `docs/testing/black-box-test-plan.md`
