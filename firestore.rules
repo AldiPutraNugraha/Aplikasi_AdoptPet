@@ -34,8 +34,44 @@ service cloud.firestore {
     match /adoptionRequests/{requestId} {
       allow read: if signedIn()
         && (resource.data.ownerId == request.auth.uid || resource.data.adopterId == request.auth.uid);
-      allow create: if isAdopter() && request.resource.data.adopterId == request.auth.uid;
-      allow update: if isOwner() && resource.data.ownerId == request.auth.uid;
+      allow create: if isAdopter()
+        && request.resource.data.adopterId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.keys().hasOnly([
+          'petId',
+          'ownerId',
+          'adopterId',
+          'screeningAnswers',
+          'status',
+          'requestedAt'
+        ])
+        && request.resource.data.screeningAnswers.keys().hasOnly([
+          'adoptionReason',
+          'petCareExperience',
+          'livingCondition',
+          'dailyCareAvailability',
+          'whatsappContact'
+        ])
+        && request.resource.data.screeningAnswers.adoptionReason is string
+        && request.resource.data.screeningAnswers.adoptionReason.size() > 0
+        && request.resource.data.screeningAnswers.petCareExperience is string
+        && request.resource.data.screeningAnswers.petCareExperience.size() > 0
+        && request.resource.data.screeningAnswers.livingCondition is string
+        && request.resource.data.screeningAnswers.livingCondition.size() > 0
+        && request.resource.data.screeningAnswers.dailyCareAvailability is string
+        && request.resource.data.screeningAnswers.dailyCareAvailability.size() > 0
+        && request.resource.data.screeningAnswers.whatsappContact is string
+        && request.resource.data.screeningAnswers.whatsappContact.size() > 0
+        && request.resource.data.requestedAt == request.time
+        && get(/databases/$(database)/documents/pets/$(request.resource.data.petId)).data.ownerId == request.resource.data.ownerId
+        && get(/databases/$(database)/documents/pets/$(request.resource.data.petId)).data.status == 'available';
+      allow update: if isOwner()
+        && resource.data.ownerId == request.auth.uid
+        && resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'ownerNote', 'decidedAt'])
+        && request.resource.data.status in ['accepted', 'rejected']
+        && request.resource.data.ownerNote is string
+        && request.resource.data.decidedAt == request.time;
     }
 
     match /postAdoptionReports/{reportId} {
