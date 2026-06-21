@@ -1,4 +1,15 @@
-import { addDoc, collection, doc, getDoc, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
 
 import { firestore } from '@/lib/firebase/client';
 import type { Pet } from '@/types/domain';
@@ -48,7 +59,32 @@ export async function listOwnerPets(ownerId: string) {
   return snapshot.docs.map((item) => toPet(item.id, item.data()));
 }
 
+export async function listAvailablePetsByOwner(ownerId: string) {
+  const snapshot = await getDocs(
+    query(
+      collection(firestore, 'pets'),
+      where('ownerId', '==', ownerId),
+      where('status', '==', 'available'),
+    ),
+  );
+  return snapshot.docs.map((item) => toPet(item.id, item.data()));
+}
+
 export async function getPetById(id: string) {
   const snapshot = await getDoc(doc(firestore, 'pets', id));
   return snapshot.exists() ? toPet(snapshot.id, snapshot.data()) : null;
+}
+
+export async function updatePet(
+  id: string,
+  input: Partial<Omit<Pet, 'id' | 'ownerId' | 'createdAt' | 'updatedAt'>>,
+) {
+  await updateDoc(doc(firestore, 'pets', id), {
+    ...input,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deletePet(id: string) {
+  await deleteDoc(doc(firestore, 'pets', id));
 }

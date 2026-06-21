@@ -1,19 +1,17 @@
-import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { TextField } from '@/components/forms/TextField';
+import { BackButton } from '@/components/ui/BackButton';
 import { useAuth } from '@/contexts/auth-context';
 import { validateProfileDetails } from '@/lib/domain/profile';
 import { updateProfileDetails } from '@/lib/firebase/auth';
-import type { Coordinates } from '@/types/domain';
 
 export default function ProfileSetupScreen() {
   const { firebaseUser, profile, refreshProfile } = useAuth();
   const [phoneNumber, setPhoneNumber] = useState(profile?.phoneNumber ?? '');
   const [fullAddress, setFullAddress] = useState(profile?.fullAddress ?? '');
-  const [coordinates, setCoordinates] = useState<Coordinates | undefined>(profile?.coordinates);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -21,22 +19,7 @@ export default function ProfileSetupScreen() {
 
     setPhoneNumber((current) => current || profile.phoneNumber || '');
     setFullAddress((current) => current || profile.fullAddress || '');
-    setCoordinates((current) => current ?? profile.coordinates);
   }, [profile]);
-
-  async function useCurrentLocation() {
-    const permission = await Location.requestForegroundPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Lokasi ditolak', 'Alamat tetap bisa diisi manual.');
-      return;
-    }
-
-    const current = await Location.getCurrentPositionAsync({});
-    setCoordinates({
-      latitude: current.coords.latitude,
-      longitude: current.coords.longitude,
-    });
-  }
 
   async function onSubmit() {
     if (!firebaseUser) {
@@ -49,7 +32,7 @@ export default function ProfileSetupScreen() {
       return;
     }
 
-    const validation = validateProfileDetails({ phoneNumber, fullAddress, coordinates });
+    const validation = validateProfileDetails({ phoneNumber, fullAddress });
     if (!validation.valid) {
       Alert.alert(
         'Profil belum lengkap',
@@ -72,6 +55,7 @@ export default function ProfileSetupScreen() {
 
   return (
     <View style={styles.screen}>
+      <BackButton />
       <Text style={styles.title}>Lengkapi Profil</Text>
       <TextField
         label="Nomor WhatsApp"
@@ -80,11 +64,6 @@ export default function ProfileSetupScreen() {
         keyboardType="phone-pad"
       />
       <TextField label="Alamat lengkap" value={fullAddress} onChangeText={setFullAddress} multiline />
-      <Pressable style={styles.secondaryButton} onPress={useCurrentLocation}>
-        <Text style={styles.secondaryButtonText}>
-          {coordinates ? 'Koordinat tersimpan' : 'Ambil Lokasi Saat Ini'}
-        </Text>
-      </Pressable>
       <Pressable style={styles.button} onPress={onSubmit} disabled={saving}>
         <Text style={styles.buttonText}>{saving ? 'Menyimpan...' : 'Simpan Profil'}</Text>
       </Pressable>
@@ -97,12 +76,4 @@ const styles = StyleSheet.create({
   title: { color: '#0f766e', fontSize: 28, fontWeight: '800' },
   button: { alignItems: 'center', borderRadius: 8, backgroundColor: '#0f766e', paddingVertical: 14 },
   buttonText: { color: '#ffffff', fontWeight: '700' },
-  secondaryButton: {
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#0f766e',
-    borderRadius: 8,
-    paddingVertical: 14,
-  },
-  secondaryButtonText: { color: '#0f766e', fontWeight: '700' },
 });

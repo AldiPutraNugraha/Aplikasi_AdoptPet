@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { TextField } from '@/components/forms/TextField';
+import { BackButton } from '@/components/ui/BackButton';
 import { useAuth } from '@/contexts/auth-context';
 import {
   submitAdoptionRequest,
@@ -181,6 +182,7 @@ export default function AdoptionRequestScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <BackButton />
       <View style={styles.header}>
         <Text style={styles.title}>Form Adopsi</Text>
         <Text style={styles.subtitle}>

@@ -7,6 +7,7 @@ import { PhotoPicker } from '@/components/forms/PhotoPicker';
 import { PetCard } from '@/components/pets/PetCard';
 import { useAuth } from '@/contexts/auth-context';
 import { analyzePetImage } from '@/lib/ai/openrouter-client';
+import { buildPetVocabulary } from '@/lib/ai/pet-vocabulary';
 import { sortByDistance } from '@/lib/domain/distance';
 import { sortPetsByVisualMatch } from '@/lib/domain/visual-match';
 import { listAvailablePets } from '@/lib/firebase/pets';
@@ -98,8 +99,9 @@ export default function SearchScreen() {
 
     try {
       const imagePath = `search/${firebaseUser.uid}/${Date.now()}.jpg`;
-      await uploadImageAsync(imageUris[0], imagePath);
-      const attributes = await analyzePetImage(imagePath);
+      const imageUrl = await uploadImageAsync(imageUris[0], imagePath);
+      const vocabulary = buildPetVocabulary(pets);
+      const attributes = await analyzePetImage(imageUrl, vocabulary);
       setVisualAttributes(attributes);
       setVisualResults(sortPetsByVisualMatch(pets, attributes));
     } catch (caughtError) {

@@ -1,5 +1,5 @@
 import { Redirect } from 'expo-router';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { useAuth } from '@/contexts/auth-context';
 
@@ -9,13 +9,14 @@ export default function IndexScreen() {
   if (loading) {
     return (
       <View style={styles.screen}>
-        <ActivityIndicator color="#0f766e" />
+        <ActivityIndicator color="#0f766e" size="large" />
+        <Text style={styles.text}>Memuat sesi...</Text>
       </View>
     );
   }
 
   if (!firebaseUser) {
-    return <Redirect href="/auth/login" />;
+    return <Redirect href="/welcome" />;
   }
 
   if (!profile?.phoneNumber.trim() || !profile.fullAddress.trim()) {
@@ -26,5 +27,12 @@ export default function IndexScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' },
+  screen: {
+    flex: 1,
+    gap: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f8fafc',
+  },
+  text: { color: '#475569', fontSize: 14, fontWeight: '600' },
 });

@@ -1,9 +1,21 @@
-import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
+import { ExecutionEnvironment } from 'expo-constants';
 import { deleteField, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 
 import { firestore } from '@/lib/firebase/client';
 
+const isExpoGo =
+  Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
 export async function registerPushToken(userId: string) {
+  // expo-notifications push registration is unsupported in Expo Go SDK 53+.
+  // Skipping the import avoids the DevicePushTokenAutoRegistration side-effect crash.
+  if (isExpoGo) {
+    return null;
+  }
+
+  const Notifications = await import('expo-notifications');
+
   const permission = await Notifications.requestPermissionsAsync();
 
   if (!permission.granted) {

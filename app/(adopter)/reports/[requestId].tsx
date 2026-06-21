@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 
 import { PhotoPicker } from '@/components/forms/PhotoPicker';
 import { TextField } from '@/components/forms/TextField';
+import { BackButton } from '@/components/ui/BackButton';
 import { useAuth } from '@/contexts/auth-context';
 import { getReportForRequest, submitMonitoringReport } from '@/lib/firebase/reports';
 import { uploadImageAsync } from '@/lib/firebase/storage';
@@ -147,6 +148,7 @@ export default function MonitoringReportScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <BackButton />
       <View style={styles.header}>
         <Text style={styles.title}>Laporan Kondisi</Text>
         <Text style={styles.subtitle}>Jatuh tempo: {formatDate(report.dueAt)}</Text>

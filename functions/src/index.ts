@@ -1,5 +1,4 @@
 import * as admin from 'firebase-admin';
-import { defineSecret } from 'firebase-functions/params';
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
@@ -18,7 +17,6 @@ import { analyzeImageWithOpenRouter } from './openrouter';
 admin.initializeApp();
 
 const MODEL = 'google/gemini-2.5-flash';
-const openRouterApiKey = defineSecret('OPENROUTER_API_KEY');
 
 async function writeAiSearchLog(data: Record<string, unknown>) {
   await admin.firestore().collection('aiSearchLogs').add({
@@ -95,7 +93,7 @@ function toDate(value: unknown) {
   return undefined;
 }
 
-export const analyzePetImage = onCall({ region: 'asia-southeast2', secrets: [openRouterApiKey] }, async (request) => {
+export const analyzePetImage = onCall({ region: 'asia-southeast2' }, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Login diperlukan untuk pencarian visual.');
   }
@@ -107,7 +105,7 @@ export const analyzePetImage = onCall({ region: 'asia-southeast2', secrets: [ope
     throw new HttpsError('invalid-argument', 'Foto referensi belum valid.');
   }
 
-  const apiKey = openRouterApiKey.value();
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new HttpsError('failed-precondition', 'OpenRouter API key belum dikonfigurasi.');
   }

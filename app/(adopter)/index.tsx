@@ -4,7 +4,6 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from '
 
 import { PetCard } from '@/components/pets/PetCard';
 import { useAuth } from '@/contexts/auth-context';
-import { logout } from '@/lib/firebase/auth';
 import { listAvailablePets } from '@/lib/firebase/pets';
 import { listReportsForAdopter } from '@/lib/firebase/reports';
 import type { MonitoringReportStatus, Pet, PostAdoptionReport } from '@/types/domain';
@@ -90,14 +89,9 @@ export default function AdopterHomeScreen() {
       )}
       ListHeaderComponent={
         <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <View style={styles.headerText}>
-              <Text style={styles.title}>Cari Hewan</Text>
-              <Text style={styles.body}>Temukan hewan yang sedang siap diadopsi.</Text>
-            </View>
-            <Pressable style={styles.logoutButton} onPress={logout}>
-              <Text style={styles.logoutText}>Keluar</Text>
-            </Pressable>
+          <View style={styles.headerText}>
+            <Text style={[styles.title, { fontFamily: 'Poppins_800ExtraBold' }]}>Cari Hewan</Text>
+            <Text style={[styles.body, { fontFamily: 'Poppins_500Medium' }]}>Temukan hewan yang sedang siap diadopsi.</Text>
           </View>
           {activeReports.length > 0 ? (
             <View style={styles.monitoringPanel}>
@@ -139,18 +133,9 @@ const styles = StyleSheet.create({
   content: { gap: 12, padding: 20, paddingBottom: 32 },
   emptyContent: { flexGrow: 1, gap: 20, padding: 20 },
   header: { gap: 6, marginBottom: 4 },
-  headerTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
-  headerText: { flex: 1, gap: 6 },
+  headerText: { gap: 6 },
   title: { color: '#0f766e', fontSize: 28, fontWeight: '800' },
   body: { color: '#475569', fontSize: 16 },
-  logoutButton: {
-    borderWidth: 1,
-    borderColor: '#0f766e',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  logoutText: { color: '#0f766e', fontWeight: '800' },
   sectionTitle: { color: '#0f172a', fontSize: 17, fontWeight: '800' },
   monitoringPanel: { gap: 10, marginTop: 10 },
   reportItem: {

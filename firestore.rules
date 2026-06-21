@@ -85,7 +85,7 @@ service cloud.firestore {
         && request.resource.data.fullAddress is string
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
-      allow read: if isSelf(userId);
+      allow read: if signedIn();
       allow update: if isSelf(userId)
         && request.resource.data.id == resource.data.id
         && request.resource.data.email == resource.data.email
@@ -113,6 +113,9 @@ service cloud.firestore {
         && request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.createdAt == resource.data.createdAt
         && (isEditablePetDetailsUpdate() || isAdoptionPetTransition(petId));
+      allow delete: if isOwner()
+        && resource.data.ownerId == request.auth.uid
+        && resource.data.status == 'available';
     }
 
     match /adoptionRequests/{requestId} {
@@ -191,6 +194,16 @@ service cloud.firestore {
 
     match /aiSearchLogs/{logId} {
       allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /vocabularies/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /breeds/{species} {
+      allow read: if signedIn();
       allow write: if false;
     }
   }
