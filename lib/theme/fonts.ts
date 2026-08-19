@@ -39,11 +39,9 @@ export function patchTextDefaults() {
   const OriginalText = Text as unknown as { render: (props: unknown, ref: unknown) => unknown };
   const originalTextRender = OriginalText.render?.bind(OriginalText);
   if (originalTextRender) {
-    OriginalText.render = function patchedTextRender(
-      props: Record<string, unknown>,
-      ref: unknown,
-    ) {
-      return originalTextRender({ ...props, style: withFontFamily(props.style) }, ref);
+    OriginalText.render = function patchedTextRender(props: unknown, ref: unknown) {
+      const p = props as Record<string, unknown>;
+      return originalTextRender({ ...p, style: withFontFamily(p.style) }, ref);
     };
   }
 
@@ -52,11 +50,9 @@ export function patchTextDefaults() {
   };
   const originalInputRender = OriginalInput.render?.bind(OriginalInput);
   if (originalInputRender) {
-    OriginalInput.render = function patchedInputRender(
-      props: Record<string, unknown>,
-      ref: unknown,
-    ) {
-      return originalInputRender({ ...props, style: withFontFamily(props.style) }, ref);
+    OriginalInput.render = function patchedInputRender(props: unknown, ref: unknown) {
+      const p = props as Record<string, unknown>;
+      return originalInputRender({ ...p, style: withFontFamily(p.style) }, ref);
     };
   }
 }

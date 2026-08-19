@@ -9,6 +9,7 @@ type Props = {
   onChange: (uris: string[]) => void;
   buttonLabel?: string;
   selectionLimit?: number;
+  hint?: string;
 };
 
 export function PhotoPicker({
@@ -16,7 +17,8 @@ export function PhotoPicker({
   value,
   onChange,
   buttonLabel = 'Pilih foto',
-  selectionLimit = 8,
+  selectionLimit = 10,
+  hint,
 }: Props) {
   const [permissionMessage, setPermissionMessage] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
@@ -33,10 +35,11 @@ export function PhotoPicker({
         return;
       }
 
+      const remaining = Math.max(1, selectionLimit - value.length);
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsMultipleSelection: true,
-        selectionLimit,
+        selectionLimit: remaining,
         quality: 0.8,
       });
 
@@ -45,7 +48,8 @@ export function PhotoPicker({
       }
 
       const pickedUris = result.assets.map((asset) => asset.uri).filter(Boolean);
-      onChange([...value, ...pickedUris]);
+      const merged = [...value, ...pickedUris].slice(0, selectionLimit);
+      onChange(merged);
     } catch {
       setPermissionMessage('Foto belum bisa dipilih. Coba lagi sebentar lagi.');
     } finally {
@@ -57,15 +61,33 @@ export function PhotoPicker({
     onChange(value.filter((item) => item !== uri));
   }
 
+  const reachedLimit = value.length >= selectionLimit;
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.label}>{label}</Text>
-        <Text style={styles.count}>{value.length} dipilih</Text>
+        <Text style={styles.count}>
+          {value.length} / {selectionLimit} dipilih
+        </Text>
       </View>
 
-      <Pressable style={styles.button} onPress={pickImages} disabled={picking}>
-        <Text style={styles.buttonText}>{picking ? 'Membuka galeri...' : buttonLabel}</Text>
+      {hint ? <Text style={styles.hint}>{hint}</Text> : null}
+
+      <Pressable
+        style={[styles.button, reachedLimit && styles.buttonDisabled]}
+        onPress={pickImages}
+        disabled={picking || reachedLimit}
+      >
+        <Text style={styles.buttonText}>
+          {picking
+            ? 'Membuka galeri...'
+            : reachedLimit
+            ? 'Batas foto tercapai'
+            : value.length > 0
+            ? 'Tambah foto lagi'
+            : buttonLabel}
+        </Text>
       </Pressable>
 
       {permissionMessage ? <Text style={styles.message}>{permissionMessage}</Text> : null}
@@ -100,6 +122,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0fdfa',
   },
   buttonText: { color: '#0f766e', fontWeight: '700' },
+  buttonDisabled: { opacity: 0.5 },
+  hint: { color: '#475569', fontSize: 12, lineHeight: 17 },
   message: { color: '#b45309', fontSize: 13 },
   previewList: { gap: 10, paddingVertical: 2 },
   previewItem: { width: 104, gap: 6 },

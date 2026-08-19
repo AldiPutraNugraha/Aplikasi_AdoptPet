@@ -5,6 +5,13 @@ import { vocabularyToPromptText, type PetVocabulary } from './pet-vocabulary';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_MODEL = 'google/gemini-2.5-flash';
 
+export class NotAPetImageError extends Error {
+  constructor(message = 'Gambar yang Anda unggah bukan hewan. Silakan pilih foto hewan peliharaan (kucing, anjing, dll).') {
+    super(message);
+    this.name = 'NotAPetImageError';
+  }
+}
+
 function normalizeText(value: string) {
   return value.trim().toLowerCase();
 }
@@ -15,15 +22,46 @@ function normalizeOptionalText(value?: string) {
 }
 
 function parseContent(content: unknown): unknown {
-  if (typeof content === 'string') return JSON.parse(content);
   if (content && typeof content === 'object') return content;
-  throw new Error('Respons OpenRouter tidak berisi JSON.');
+  if (typeof content !== 'string') throw new Error('Respons OpenRouter tidak berisi JSON.');
+
+  const trimmed = content.trim();
+  if (trimmed.length === 0) throw new Error('Respons OpenRouter kosong. Coba foto lain atau coba lagi.');
+
+  // Strip markdown fences (```json ... ```) if present
+  const cleaned = trimmed.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // Try extracting JSON object from surrounding text
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      try {
+        return JSON.parse(match[0]);
+      } catch {
+        // fall through
+      }
+    }
+    throw new Error('Respons AI tidak valid. Coba foto lain atau coba lagi.');
+  }
 }
 
 function normalize(input: unknown): VisualAttributes {
-  const raw = input as Partial<VisualAttributes>;
+  const raw = input as Partial<VisualAttributes> & { isPet?: boolean };
+
+  if (raw?.isPet === false) {
+    throw new NotAPetImageError();
+  }
+
   if (!raw?.species || !raw?.primaryColor || !raw?.furPattern || typeof raw.confidence !== 'number') {
-    throw new Error('Atribut visual tidak lengkap.');
+    throw new NotAPetImageError();
+  }
+
+  const speciesText = normalizeText(String(raw.species));
+  const invalidSpecies = ['null', 'unknown', 'tidak diketahui', 'none', 'n/a', 'na', ''];
+  if (invalidSpecies.includes(speciesText)) {
+    throw new NotAPetImageError();
   }
 
   const result: VisualAttributes = {
@@ -43,8 +81,17 @@ function normalize(input: unknown): VisualAttributes {
 }
 
 function buildPrompt(vocab?: PetVocabulary): string {
-  const base =
-    'Analyze this pet image and return ONLY a JSON object with fields: species, primaryColor, secondaryColor (optional), furPattern, estimatedBreed (optional), confidence (0-1).';
+  const base = [
+    'You are analyzing an image to help someone search for adoptable pets.',
+    '',
+    'FIRST, determine if the image contains a real pet animal (cat, dog, rabbit, bird, hamster, or similar companion animal).',
+    '',
+    'If the image does NOT contain a pet animal (e.g. it shows a human, object, food, document, QR code, screenshot, landscape, cartoon, or any non-animal subject), return ONLY: {"isPet": false}.',
+    '',
+    'If the image DOES contain a pet animal, return ONLY a JSON object with fields: isPet (true), species, primaryColor, secondaryColor (optional), furPattern, estimatedBreed (optional), confidence (0-1).',
+    '',
+    'Do not guess or invent pet attributes for non-animal images. Be strict — if unsure, return isPet: false.',
+  ].join('\n');
 
   if (!vocab) return base;
 
@@ -119,9 +166,19 @@ export async function analyzePetImage(
   }
 
   const data = await response.json();
-  console.log('[analyzePetImage] raw response', JSON.stringify(data).slice(0, 300));
-
   const content = data?.choices?.[0]?.message?.content;
+  const finishReason = data?.choices?.[0]?.finish_reason;
+  console.log('[analyzePetImage] raw response', {
+    contentType: typeof content,
+    contentLength: typeof content === 'string' ? content.length : null,
+    contentPreview: typeof content === 'string' ? content.slice(0, 100) : String(content),
+    finishReason,
+  });
+
+  if (content === undefined || content === null) {
+    throw new Error('AI tidak mengembalikan hasil. Coba foto lain atau coba lagi.');
+  }
+
   const result = normalize(parseContent(content));
   console.log('[analyzePetImage] success', result);
   return result;

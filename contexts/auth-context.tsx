@@ -1,4 +1,4 @@
-import { onAuthStateChanged, type User } from 'firebase/auth';
+import { onAuthStateChanged, type User } from "firebase/auth";
 import {
   createContext,
   type PropsWithChildren,
@@ -7,12 +7,12 @@ import {
   useEffect,
   useMemo,
   useState,
-} from 'react';
+} from "react";
 
-import { getUserProfile } from '@/lib/firebase/auth';
-import { firebaseAuth } from '@/lib/firebase/client';
-import { registerPushToken } from '@/lib/firebase/notifications';
-import type { AppUser } from '@/types/domain';
+import { getUserProfile } from "@/lib/firebase/auth";
+import { firebaseAuth } from "@/lib/firebase/client";
+import { registerPushToken } from "@/lib/firebase/notifications";
+import type { AppUser } from "@/types/domain";
 
 type AuthContextValue = {
   firebaseUser: User | null;
@@ -57,9 +57,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         if (active && requestId === authRequestId) {
           setProfile(nextProfile);
           if (user && nextProfile) {
-            registerPushToken(user.uid).catch(() => {
-              // Push notifications are reminders; auth should not fail if token registration fails.
-            });
+            registerPushToken(user.uid).catch(() => {});
           }
         }
       } finally {
@@ -88,7 +86,7 @@ export function useAuth() {
   const value = useContext(AuthContext);
 
   if (!value) {
-    throw new Error('useAuth must be used inside AuthProvider');
+    throw new Error("useAuth must be used inside AuthProvider");
   }
 
   return value;

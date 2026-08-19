@@ -24,6 +24,7 @@ export default function AdopterLayout() {
           tabBarIcon: ({ color, size }) => <Ionicons name="search" color={color} size={size} />,
         }}
       />
+      <Tabs.Screen name="map" options={{ href: null, title: 'Peta Hewan' }} />
       <Tabs.Screen
         name="profile"
         options={{

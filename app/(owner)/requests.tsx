@@ -1,6 +1,6 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { TextField } from '@/components/forms/TextField';
 import { useAuth } from '@/contexts/auth-context';
@@ -106,6 +106,12 @@ export default function OwnerRequestsScreen() {
         ownerNote: notes[request.id]?.trim() ?? '',
       });
       await loadRequests();
+      Alert.alert(
+        status === 'accepted' ? 'Pengajuan diterima' : 'Pengajuan ditolak',
+        status === 'accepted'
+          ? 'Status pengajuan berhasil diterima dan status hewan diperbarui.'
+          : 'Status pengajuan berhasil ditolak.',
+      );
     } catch {
       setDecisionError('Keputusan belum tersimpan. Periksa koneksi lalu coba lagi.');
     } finally {

@@ -1,7 +1,7 @@
 import * as Location from 'expo-location';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import MapView, { Marker, type MapPressEvent, type MarkerDragStartEndEvent } from 'react-native-maps';
+import MapView, { Marker } from 'react-native-maps';
 
 import { TextField } from '@/components/forms/TextField';
 import type { Coordinates } from '@/types/domain';
@@ -20,6 +20,9 @@ const DEFAULT_REGION = {
   latitudeDelta: 0.05,
   longitudeDelta: 0.05,
 };
+
+const GEOCODE_DEBOUNCE_MS = 900;
+const MIN_ADDRESS_LENGTH = 8;
 
 function formatGeocode(result: Location.LocationGeocodedAddress | undefined) {
   if (!result) return '';
@@ -48,6 +51,8 @@ export function LocationPicker({
   const [locating, setLocating] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [geocoding, setGeocoding] = useState(false);
+  const skipAddressGeocodeRef = useRef(false);
+  const lastGeocodedAddressRef = useRef<string>('');
 
   function recenter(next: Coordinates) {
     mapRef.current?.animateToRegion(
@@ -66,7 +71,11 @@ export function LocationPicker({
     try {
       const results = await Location.reverseGeocodeAsync(next);
       const formatted = formatGeocode(results[0]);
-      if (formatted) onAddressChange(formatted);
+      if (formatted) {
+        skipAddressGeocodeRef.current = true;
+        lastGeocodedAddressRef.current = formatted;
+        onAddressChange(formatted);
+      }
     } catch {
       // Silently ignore — user can type manually.
     } finally {
@@ -74,7 +83,7 @@ export function LocationPicker({
     }
   }
 
-  function updateCoordinates(next: Coordinates) {
+  function updateCoordinatesFromGps(next: Coordinates) {
     onCoordinatesChange(next);
     void reverseGeocode(next);
   }
@@ -85,7 +94,7 @@ export function LocationPicker({
     try {
       const permission = await Location.requestForegroundPermissionsAsync();
       if (permission.status !== Location.PermissionStatus.GRANTED) {
-        setMessage('Izin lokasi ditolak. Geser pin di peta untuk menentukan lokasi hewan.');
+        setMessage('Izin lokasi ditolak. Aktifkan izin lokasi untuk menandai lokasi hewan.');
         return;
       }
 
@@ -94,22 +103,47 @@ export function LocationPicker({
         latitude: current.coords.latitude,
         longitude: current.coords.longitude,
       };
-      updateCoordinates(next);
+      updateCoordinatesFromGps(next);
       recenter(next);
     } catch {
-      setMessage('Gagal mengambil lokasi. Geser pin di peta untuk menentukan lokasi hewan.');
+      setMessage('Gagal mengambil lokasi. Pastikan GPS aktif lalu coba lagi.');
     } finally {
       setLocating(false);
     }
   }
 
-  function handleMapPress(event: MapPressEvent) {
-    updateCoordinates(event.nativeEvent.coordinate);
-  }
+  useEffect(() => {
+    if (skipAddressGeocodeRef.current) {
+      skipAddressGeocodeRef.current = false;
+      return;
+    }
+    const trimmed = address.trim();
+    if (trimmed.length < MIN_ADDRESS_LENGTH) return;
+    if (trimmed === lastGeocodedAddressRef.current) return;
 
-  function handleMarkerDragEnd(event: MarkerDragStartEndEvent) {
-    updateCoordinates(event.nativeEvent.coordinate);
-  }
+    const handle = setTimeout(async () => {
+      setGeocoding(true);
+      try {
+        const results = await Location.geocodeAsync(trimmed);
+        const first = results[0];
+        if (first) {
+          const next = { latitude: first.latitude, longitude: first.longitude };
+          lastGeocodedAddressRef.current = trimmed;
+          onCoordinatesChange(next);
+          recenter(next);
+          setMessage(null);
+        } else {
+          setMessage('Alamat tidak ditemukan. Coba lengkapi alamat atau gunakan tombol GPS.');
+        }
+      } catch {
+        setMessage('Gagal mencari alamat di peta. Periksa koneksi lalu coba lagi.');
+      } finally {
+        setGeocoding(false);
+      }
+    }, GEOCODE_DEBOUNCE_MS);
+
+    return () => clearTimeout(handle);
+  }, [address, onCoordinatesChange]);
 
   return (
     <View style={styles.container}>
@@ -122,7 +156,7 @@ export function LocationPicker({
         placeholder="Jl. Contoh No.1, kelurahan, kota"
         multiline
       />
-      {geocoding ? <Text style={styles.hintText}>Mengisi alamat dari peta...</Text> : null}
+      {geocoding ? <Text style={styles.hintText}>Mencari lokasi di peta...</Text> : null}
 
       <Pressable style={styles.button} onPress={useCurrentLocation} disabled={locating}>
         <Text style={styles.buttonText}>
@@ -135,7 +169,9 @@ export function LocationPicker({
           Titik: {coordinates.latitude.toFixed(5)}, {coordinates.longitude.toFixed(5)}
         </Text>
       ) : (
-        <Text style={styles.hintText}>Ketuk peta atau geser pin untuk menandai lokasi hewan.</Text>
+        <Text style={styles.hintText}>
+          Isi alamat lengkap untuk menandai lokasi otomatis, atau tekan tombol GPS.
+        </Text>
       )}
 
       {Platform.OS === 'web' ? (
@@ -156,11 +192,8 @@ export function LocationPicker({
                 }
               : DEFAULT_REGION
           }
-          onPress={handleMapPress}
         >
-          {coordinates ? (
-            <Marker coordinate={coordinates} draggable onDragEnd={handleMarkerDragEnd} />
-          ) : null}
+          {coordinates ? <Marker coordinate={coordinates} /> : null}
         </MapView>
       )}
 

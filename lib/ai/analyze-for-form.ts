@@ -1,3 +1,4 @@
+import { NotAPetImageError } from '@/lib/ai/openrouter-client';
 import { getBreedsBySpecies, getVocabulary } from '@/lib/firebase/vocabularies';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -43,14 +44,19 @@ function vocabListText(label: string, items: string[]): string {
 
 function buildInitialPrompt(vocabBlock: string): string {
   return [
-    'Analyze this pet image and return ONLY a valid JSON object with these exact fields:',
-    '{ "species": string, "estimatedBreed": string, "primaryColor": string, "secondaryColor": string, "furPattern": string, "confidence": number (0..1) }',
+    'FIRST, determine if the image contains a real pet animal (cat, dog, rabbit, bird, hamster, or similar companion animal).',
+    '',
+    'If the image does NOT contain a pet animal (e.g. it shows a human, object, food, document, QR code, screenshot, landscape, cartoon, or any non-animal subject), return ONLY: {"isPet": false}',
+    '',
+    'If the image DOES contain a pet animal, return ONLY a valid JSON object with these exact fields:',
+    '{ "isPet": true, "species": string, "estimatedBreed": string, "primaryColor": string, "secondaryColor": string, "furPattern": string, "confidence": number (0..1) }',
     '',
     'RULES:',
     '1. Use lowercase Indonesian terms.',
     `2. Prefer values from the known vocabulary below. If you cannot identify a value with confidence, return "${UNKNOWN_LABEL}".`,
     '3. Do not invent or hallucinate. "tidak tahu" is acceptable for any field.',
     '4. Return JSON only — no markdown, no commentary.',
+    '5. Be strict about isPet — if unsure, return isPet: false.',
     '',
     'Known vocabulary (from the adoption database):',
     vocabBlock,
@@ -91,9 +97,34 @@ async function callOpenRouter(prompt: string, imageUrl: string): Promise<Record<
 
   const data = await response.json();
   const content = data?.choices?.[0]?.message?.content;
-  if (typeof content === 'string') return JSON.parse(content) as Record<string, unknown>;
   if (content && typeof content === 'object') return content as Record<string, unknown>;
+  if (typeof content === 'string') return parseJsonLoose(content);
   throw new Error('Respons OpenRouter tidak berisi JSON.');
+}
+
+function parseJsonLoose(raw: string): Record<string, unknown> {
+  const trimmed = raw.trim();
+  if (!trimmed) throw new Error('Respons AI kosong. Coba foto lain atau ulangi.');
+
+  const stripped = trimmed
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+
+  try {
+    return JSON.parse(stripped) as Record<string, unknown>;
+  } catch {
+    const start = stripped.indexOf('{');
+    const end = stripped.lastIndexOf('}');
+    if (start !== -1 && end > start) {
+      try {
+        return JSON.parse(stripped.slice(start, end + 1)) as Record<string, unknown>;
+      } catch {
+        // fall through
+      }
+    }
+    throw new Error(`Respons AI bukan JSON valid: ${stripped.slice(0, 120)}`);
+  }
 }
 
 export async function analyzePetForForm(imageUrl: string): Promise<PetFormSuggestion> {
@@ -110,7 +141,15 @@ export async function analyzePetForForm(imageUrl: string): Promise<PetFormSugges
   const initial = await callOpenRouter(buildInitialPrompt(vocabBlock), imageUrl);
   console.log('[analyzePetForForm] initial', initial);
 
+  if (initial.isPet === false) {
+    throw new NotAPetImageError();
+  }
+
   const speciesRaw = normalize(initial.species);
+  const invalidSpecies = ['', 'null', 'unknown', 'none', 'n/a', 'na', UNKNOWN_LABEL];
+  if (invalidSpecies.includes(speciesRaw) && !normalize(initial.primaryColor) && !normalize(initial.furPattern)) {
+    throw new NotAPetImageError();
+  }
   const species = speciesRaw && speciesRaw !== UNKNOWN_LABEL ? pickFromVocab(speciesRaw, vocab.species) : UNKNOWN_LABEL;
 
   // Stage 2: refine breed using species-specific vocabulary

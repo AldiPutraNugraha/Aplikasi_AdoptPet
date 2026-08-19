@@ -17,9 +17,27 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
 
   async function onSubmit() {
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedName || !trimmedEmail || !password) {
+      Alert.alert('Data belum lengkap', 'Nama, email, dan password wajib diisi.');
+      return;
+    }
+
+    if (!trimmedEmail.includes('@')) {
+      Alert.alert('Email tidak valid', 'Masukkan alamat email dengan format yang benar.');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Password terlalu pendek', 'Password minimal 6 karakter.');
+      return;
+    }
+
     setLoading(true);
     try {
-      await registerWithRole({ name: name.trim(), email: email.trim(), password, role });
+      await registerWithRole({ name: trimmedName, email: trimmedEmail, password, role });
       await refreshProfile();
       router.replace('/profile/setup');
     } catch (error) {

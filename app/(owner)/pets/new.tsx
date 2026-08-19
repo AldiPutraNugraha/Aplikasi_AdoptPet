@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { DropdownField } from '@/components/forms/DropdownField';
@@ -11,6 +11,7 @@ import { TextField } from '@/components/forms/TextField';
 import { BackButton } from '@/components/ui/BackButton';
 import { useAuth } from '@/contexts/auth-context';
 import { analyzePetForForm } from '@/lib/ai/analyze-for-form';
+import { NotAPetImageError } from '@/lib/ai/openrouter-client';
 import { createPet } from '@/lib/firebase/pets';
 import { uploadImageAsync } from '@/lib/firebase/storage';
 import { useBreedsBySpecies, usePetVocab } from '@/lib/hooks/use-pet-vocab';
@@ -60,6 +61,42 @@ export default function NewPetScreen() {
   const { vocab, loading: vocabLoading } = usePetVocab();
   const { breeds, loading: breedsLoading } = useBreedsBySpecies(species);
 
+  const scrollRef = useRef<ScrollView>(null);
+  const fieldOffsets = useRef<Record<string, number>>({});
+
+  function registerField(key: string) {
+    return (event: { nativeEvent: { layout: { y: number } } }) => {
+      fieldOffsets.current[key] = event.nativeEvent.layout.y;
+    };
+  }
+
+  function scrollToField(key: string) {
+    const y = fieldOffsets.current[key];
+    if (typeof y === 'number') {
+      scrollRef.current?.scrollTo({ y: Math.max(0, y - 16), animated: true });
+    }
+  }
+
+  function clearAllFields() {
+    setPhotoUris([]);
+    setHealthProofUris([]);
+    setName('');
+    setSpecies('');
+    setEstimatedBreed('');
+    setPrimaryColor('');
+    setSecondaryColor('');
+    setFurPattern('');
+    setAge('');
+    setSex('unknown');
+    setVaccinationStatus('unknown');
+    setSterilizationStatus('unknown');
+    setMedicalHistory('');
+    setDescription('');
+    setPetAddress('');
+    setPetCoordinates(undefined);
+    setAutoFilledFrom(null);
+  }
+
   function resetForm() {
     Alert.alert(
       'Reset form?',
@@ -69,25 +106,7 @@ export default function NewPetScreen() {
         {
           text: 'Reset',
           style: 'destructive',
-          onPress: () => {
-            setPhotoUris([]);
-            setHealthProofUris([]);
-            setName('');
-            setSpecies('');
-            setEstimatedBreed('');
-            setPrimaryColor('');
-            setSecondaryColor('');
-            setFurPattern('');
-            setAge('');
-            setSex('unknown');
-            setVaccinationStatus('unknown');
-            setSterilizationStatus('unknown');
-            setMedicalHistory('');
-            setDescription('');
-            setPetAddress('');
-            setPetCoordinates(undefined);
-            setAutoFilledFrom(null);
-          },
+          onPress: clearAllFields,
         },
       ],
     );
@@ -120,10 +139,14 @@ export default function NewPetScreen() {
       );
     } catch (error) {
       console.warn('[NewPet] auto-fill failed', error);
-      Alert.alert(
-        'Auto-isi gagal',
-        error instanceof Error ? error.message : 'Isi manual jenis, ras, warna, dan pola bulu.',
-      );
+      if (error instanceof NotAPetImageError) {
+        Alert.alert('Gambar bukan hewan', error.message);
+      } else {
+        Alert.alert(
+          'Auto-isi gagal',
+          error instanceof Error ? error.message : 'Isi manual jenis, ras, warna, dan pola bulu.',
+        );
+      }
     } finally {
       setAutoFilling(false);
     }
@@ -135,23 +158,23 @@ export default function NewPetScreen() {
       return;
     }
 
-    if (!name.trim() || !species.trim() || !primaryColor.trim() || !furPattern.trim() || !age.trim()) {
-      Alert.alert('Data belum lengkap', 'Nama, jenis hewan, warna utama, pola bulu, dan umur perlu diisi.');
-      return;
-    }
+    const missing: { key: string; title: string; message: string } | null = (() => {
+      if (photoUris.length === 0) {
+        return { key: 'photos', title: 'Foto hewan belum ada', message: 'Tambahkan minimal satu foto hewan agar calon adopter bisa melihatnya.' };
+      }
+      if (!name.trim()) return { key: 'name', title: 'Data belum lengkap', message: 'Nama hewan perlu diisi.' };
+      if (!species.trim()) return { key: 'species', title: 'Data belum lengkap', message: 'Jenis hewan perlu diisi.' };
+      if (!primaryColor.trim()) return { key: 'primaryColor', title: 'Data belum lengkap', message: 'Warna utama perlu diisi.' };
+      if (!furPattern.trim()) return { key: 'furPattern', title: 'Data belum lengkap', message: 'Pola bulu perlu diisi.' };
+      if (!age.trim()) return { key: 'age', title: 'Data belum lengkap', message: 'Umur perlu diisi.' };
+      if (!petAddress.trim()) return { key: 'location', title: 'Alamat hewan belum ada', message: 'Isi alamat lokasi hewan agar calon adopter tahu posisinya.' };
+      if (!petCoordinates) return { key: 'location', title: 'Titik lokasi belum ada', message: 'Tekan tombol Ambil Lokasi Hewan (GPS) untuk menandai posisi hewan.' };
+      return null;
+    })();
 
-    if (photoUris.length === 0) {
-      Alert.alert('Foto hewan belum ada', 'Tambahkan minimal satu foto hewan agar calon adopter bisa melihatnya.');
-      return;
-    }
-
-    if (!petAddress.trim()) {
-      Alert.alert('Alamat hewan belum ada', 'Isi alamat lokasi hewan agar calon adopter tahu posisinya.');
-      return;
-    }
-
-    if (!petCoordinates) {
-      Alert.alert('Titik lokasi belum ada', 'Ambil lokasi GPS atau tandai titik hewan di peta.');
+    if (missing) {
+      scrollToField(missing.key);
+      Alert.alert(missing.title, missing.message);
       return;
     }
 
@@ -185,7 +208,19 @@ export default function NewPetScreen() {
 
       await createPet(petPayload);
 
-      router.replace('/(owner)');
+      Alert.alert(
+        'Hewan berhasil disimpan',
+        'Data hewan baru sudah masuk ke daftar hewan milik Anda.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              clearAllFields();
+              router.replace('/(owner)');
+            },
+          },
+        ],
+      );
     } catch (error) {
       Alert.alert('Hewan gagal disimpan', error instanceof Error ? error.message : 'Coba lagi sebentar lagi.');
     } finally {
@@ -194,12 +229,12 @@ export default function NewPetScreen() {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView ref={scrollRef} style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <BackButton />
       <View style={styles.headerRow}>
         <View style={styles.headerText}>
           <Text style={styles.title}>Tambah Hewan</Text>
-          <Text style={styles.subtitle}>Tandai lokasi hewan di peta agar calon adopter terdekat bisa menemukannya.</Text>
+          <Text style={styles.subtitle}>Ambil lokasi GPS hewan agar calon adopter terdekat bisa menemukannya.</Text>
         </View>
         <Pressable
           style={({ pressed }) => [styles.resetButton, pressed && styles.resetButtonPressed]}
@@ -213,7 +248,15 @@ export default function NewPetScreen() {
         </Pressable>
       </View>
 
-      <PhotoPicker label="Foto hewan" value={photoUris} onChange={handlePhotosChange} buttonLabel="Pilih foto hewan" />
+      <View onLayout={registerField('photos')}>
+        <PhotoPicker
+          label="Foto hewan"
+          value={photoUris}
+          onChange={handlePhotosChange}
+          buttonLabel="Pilih foto hewan"
+          hint="Bisa pilih beberapa foto sekaligus dari galeri, atau tekan tombol lagi untuk menambah."
+        />
+      </View>
       {autoFilling ? (
         <Text style={styles.aiHint}>AI sedang menganalisis foto untuk mengisi otomatis...</Text>
       ) : null}
@@ -222,20 +265,25 @@ export default function NewPetScreen() {
         value={healthProofUris}
         onChange={setHealthProofUris}
         buttonLabel="Pilih bukti kesehatan"
+        hint="Lampirkan beberapa foto bukti seperti kartu vaksin, hasil pemeriksaan, atau surat steril."
       />
 
-      <TextField label="Nama" value={name} onChangeText={setName} />
-      <DropdownField
-        label="Jenis hewan"
-        value={species}
-        options={vocab.species}
-        loading={vocabLoading || autoFilling}
-        onChange={(next) => {
-          setSpecies(next);
-          setEstimatedBreed('');
-        }}
-        placeholder="Pilih jenis hewan..."
-      />
+      <View onLayout={registerField('name')}>
+        <TextField label="Nama" value={name} onChangeText={setName} />
+      </View>
+      <View onLayout={registerField('species')}>
+        <DropdownField
+          label="Jenis hewan"
+          value={species}
+          options={vocab.species}
+          loading={vocabLoading || autoFilling}
+          onChange={(next) => {
+            setSpecies(next);
+            setEstimatedBreed('');
+          }}
+          placeholder="Pilih jenis hewan..."
+        />
+      </View>
       <DropdownField
         label="Perkiraan ras"
         value={estimatedBreed}
@@ -244,14 +292,16 @@ export default function NewPetScreen() {
         onChange={setEstimatedBreed}
         placeholder={species ? 'Pilih ras...' : 'Pilih jenis hewan dulu'}
       />
-      <DropdownField
-        label="Warna utama"
-        value={primaryColor}
-        options={vocab.primaryColors}
-        loading={vocabLoading || autoFilling}
-        onChange={setPrimaryColor}
-        placeholder="Pilih warna utama..."
-      />
+      <View onLayout={registerField('primaryColor')}>
+        <DropdownField
+          label="Warna utama"
+          value={primaryColor}
+          options={vocab.primaryColors}
+          loading={vocabLoading || autoFilling}
+          onChange={setPrimaryColor}
+          placeholder="Pilih warna utama..."
+        />
+      </View>
       <DropdownField
         label="Warna tambahan"
         value={secondaryColor}
@@ -260,15 +310,19 @@ export default function NewPetScreen() {
         onChange={setSecondaryColor}
         placeholder="Pilih warna tambahan..."
       />
-      <DropdownField
-        label="Pola bulu"
-        value={furPattern}
-        options={vocab.furPatterns}
-        loading={vocabLoading || autoFilling}
-        onChange={setFurPattern}
-        placeholder="Pilih pola bulu..."
-      />
-      <TextField label="Umur" value={age} onChangeText={setAge} placeholder="2 tahun, 6 bulan..." />
+      <View onLayout={registerField('furPattern')}>
+        <DropdownField
+          label="Pola bulu"
+          value={furPattern}
+          options={vocab.furPatterns}
+          loading={vocabLoading || autoFilling}
+          onChange={setFurPattern}
+          placeholder="Pilih pola bulu..."
+        />
+      </View>
+      <View onLayout={registerField('age')}>
+        <TextField label="Umur" value={age} onChangeText={setAge} placeholder="2 tahun, 6 bulan..." />
+      </View>
 
       <SelectField label="Jenis kelamin" value={sex} options={sexOptions} onChange={setSex} />
       <SelectField
@@ -299,13 +353,15 @@ export default function NewPetScreen() {
         style={styles.multiline}
       />
 
-      <LocationPicker
-        label="Lokasi hewan"
-        address={petAddress}
-        coordinates={petCoordinates}
-        onAddressChange={setPetAddress}
-        onCoordinatesChange={setPetCoordinates}
-      />
+      <View onLayout={registerField('location')}>
+        <LocationPicker
+          label="Lokasi hewan"
+          address={petAddress}
+          coordinates={petCoordinates}
+          onAddressChange={setPetAddress}
+          onCoordinatesChange={setPetCoordinates}
+        />
+      </View>
 
       <Pressable style={[styles.button, saving && styles.buttonDisabled]} onPress={onSubmit} disabled={saving}>
         <Text style={styles.buttonText}>{saving ? 'Menyimpan...' : 'Simpan Hewan'}</Text>

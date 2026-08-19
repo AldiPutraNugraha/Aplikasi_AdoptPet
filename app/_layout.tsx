@@ -41,7 +41,7 @@ export default function RootLayout() {
         <Stack.Screen name="auth/login" options={{ headerShown: false }} />
         <Stack.Screen name="auth/register" options={{ headerShown: false }} />
         <Stack.Screen name="profile/setup" options={{ title: 'Lengkapi Profil' }} />
-        <Stack.Screen name="profile/index" options={{ href: null }} />
+        <Stack.Screen name="profile/index" options={{ title: 'Profil' }} />
         <Stack.Screen name="(owner)" options={{ headerShown: false }} />
         <Stack.Screen name="(adopter)" options={{ headerShown: false }} />
       </Stack>

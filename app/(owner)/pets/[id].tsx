@@ -214,12 +214,19 @@ export default function EditPetScreen() {
         <Text style={styles.subtitle}>Perbarui detail hewan atau hapus dari daftar.</Text>
       </View>
 
-      <PhotoPicker label="Foto hewan" value={photoUris} onChange={setPhotoUris} buttonLabel="Pilih foto hewan" />
+      <PhotoPicker
+        label="Foto hewan"
+        value={photoUris}
+        onChange={setPhotoUris}
+        buttonLabel="Pilih foto hewan"
+        hint="Bisa pilih beberapa foto sekaligus dari galeri, atau tekan tombol lagi untuk menambah."
+      />
       <PhotoPicker
         label="Bukti kesehatan"
         value={healthProofUris}
         onChange={setHealthProofUris}
         buttonLabel="Pilih bukti kesehatan"
+        hint="Lampirkan beberapa foto bukti seperti kartu vaksin, hasil pemeriksaan, atau surat steril."
       />
 
       <TextField label="Nama" value={name} onChangeText={setName} />

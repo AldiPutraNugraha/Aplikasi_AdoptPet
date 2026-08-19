@@ -72,6 +72,11 @@ export default function MonitoringReportScreen() {
       return;
     }
 
+    if (!conditionNote.trim()) {
+      setSubmitError('Isi catatan kondisi hewan sebelum mengirim laporan.');
+      return;
+    }
+
     setSubmitting(true);
     setSubmitError(null);
     try {

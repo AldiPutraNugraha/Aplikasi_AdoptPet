@@ -1,42 +1,110 @@
 import type { Coordinates } from '@/types/domain';
 
-const EARTH_RADIUS_KM = 6371;
+const DISTANCE_MATRIX_ENDPOINT = 'https://maps.googleapis.com/maps/api/distancematrix/json';
+const MAX_DESTINATIONS_PER_REQUEST = 25;
 
-function toRadians(value: number) {
-  return (value * Math.PI) / 180;
+type DistanceMatrixElement = {
+  status: string;
+  distance?: { value: number; text: string };
+  duration?: { value: number; text: string };
+};
+
+type DistanceMatrixResponse = {
+  status: string;
+  rows: { elements: DistanceMatrixElement[] }[];
+  error_message?: string;
+};
+
+function getApiKey() {
+  return process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
 }
 
-export function calculateDistanceKm(from: Coordinates, to: Coordinates) {
-  if (from.latitude === to.latitude && from.longitude === to.longitude) {
-    return 0;
+function formatCoordinate(coord: Coordinates) {
+  return `${coord.latitude},${coord.longitude}`;
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
+export async function fetchDrivingDistancesKm(
+  origin: Coordinates,
+  destinations: Coordinates[],
+): Promise<(number | undefined)[]> {
+  if (destinations.length === 0) return [];
+
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    console.warn('EXPO_PUBLIC_GOOGLE_MAPS_API_KEY is not set; skipping Distance Matrix.');
+    return destinations.map(() => undefined);
   }
 
-  const dLat = toRadians(to.latitude - from.latitude);
-  const dLon = toRadians(to.longitude - from.longitude);
-  const lat1 = toRadians(from.latitude);
-  const lat2 = toRadians(to.latitude);
+  const originParam = formatCoordinate(origin);
+  const results: (number | undefined)[] = [];
 
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  for (const batch of chunk(destinations, MAX_DESTINATIONS_PER_REQUEST)) {
+    const destinationsParam = batch.map(formatCoordinate).join('|');
+    const url = `${DISTANCE_MATRIX_ENDPOINT}?origins=${encodeURIComponent(originParam)}&destinations=${encodeURIComponent(destinationsParam)}&mode=driving&units=metric&key=${apiKey}`;
 
-  return Number((EARTH_RADIUS_KM * c).toFixed(2));
+    try {
+      const response = await fetch(url);
+      const data = (await response.json()) as DistanceMatrixResponse;
+
+      if (data.status !== 'OK') {
+        console.warn('Distance Matrix API error:', data.status, data.error_message);
+        results.push(...batch.map(() => undefined));
+        continue;
+      }
+
+      const elements = data.rows[0]?.elements ?? [];
+      results.push(
+        ...batch.map((_, index) => {
+          const element = elements[index];
+          if (!element || element.status !== 'OK' || !element.distance) return undefined;
+          return Number((element.distance.value / 1000).toFixed(2));
+        }),
+      );
+    } catch (error) {
+      console.warn('Distance Matrix request failed:', error);
+      results.push(...batch.map(() => undefined));
+    }
+  }
+
+  return results;
 }
 
-export function sortByDistance<T extends { coordinates?: Coordinates }>(
+export async function sortByDrivingDistance<T extends { coordinates?: Coordinates }>(
   origin: Coordinates,
   items: T[],
-) {
-  return items
-    .map((item) => ({
-      ...item,
-      ...(item.coordinates ? { distanceKm: calculateDistanceKm(origin, item.coordinates) } : {}),
-    }))
-    .sort((a, b) => {
-      if (a.distanceKm === undefined && b.distanceKm === undefined) return 0;
-      if (a.distanceKm === undefined) return 1;
-      if (b.distanceKm === undefined) return -1;
-      return a.distanceKm - b.distanceKm;
-    });
+): Promise<(T & { distanceKm?: number })[]> {
+  const indexed = items.map((item, index) => ({ item, index }));
+  const withCoords = indexed.filter((entry) => Boolean(entry.item.coordinates));
+
+  const distances = await fetchDrivingDistancesKm(
+    origin,
+    withCoords.map((entry) => entry.item.coordinates as Coordinates),
+  );
+
+  const distanceByIndex = new Map<number, number | undefined>();
+  withCoords.forEach((entry, i) => {
+    distanceByIndex.set(entry.index, distances[i]);
+  });
+
+  const enriched = items.map((item, index) => {
+    const distanceKm = distanceByIndex.get(index);
+    return distanceKm !== undefined ? { ...item, distanceKm } : { ...item };
+  });
+
+  return enriched.sort((a, b) => {
+    const aDistance = (a as { distanceKm?: number }).distanceKm;
+    const bDistance = (b as { distanceKm?: number }).distanceKm;
+    if (aDistance === undefined && bDistance === undefined) return 0;
+    if (aDistance === undefined) return 1;
+    if (bDistance === undefined) return -1;
+    return aDistance - bDistance;
+  });
 }

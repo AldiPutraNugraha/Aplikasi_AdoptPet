@@ -9,7 +9,7 @@ AdoptPet is a React Native and Expo Android application for pet adoption. It use
 - Pet posting with photos, health information, and proof uploads
 - Manual pet search by species and primary color
 - Visual pet search using OpenRouter Gemini model
-- Distance sorting with the Haversine Formula
+- Distance sorting using Google Distance Matrix API (driving distance)
 - Adoption screening form before request submission
 - Owner approval or rejection workflow
 - One-month post-adoption monitoring report

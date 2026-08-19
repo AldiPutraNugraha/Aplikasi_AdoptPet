@@ -1,4 +1,9 @@
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import {
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signOut,
+} from 'firebase/auth';
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 
 import { normalizeProfileDetails } from '@/lib/domain/profile';
@@ -62,6 +67,10 @@ export async function registerWithRole(input: {
 
 export function login(email: string, password: string) {
   return signInWithEmailAndPassword(firebaseAuth, email, password);
+}
+
+export function sendPasswordReset(email: string) {
+  return sendPasswordResetEmail(firebaseAuth, email);
 }
 
 export async function logout() {

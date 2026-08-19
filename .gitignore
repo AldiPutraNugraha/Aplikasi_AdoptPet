@@ -50,3 +50,6 @@ app-example
 
 # local isolated worktrees
 .worktrees/
+
+# draft skripsi (private)
+draft_skripsi/

@@ -11,7 +11,7 @@
 | BB-07 | Upload invalid pet image | Non-image file or file larger than 8 MB | Upload is rejected by Storage rules |
 | BB-08 | Browse available pets | Adopter opens browse screen | Available pets are displayed from Firestore |
 | BB-09 | Manual search | Species or primary color filter | Matching pets are displayed |
-| BB-10 | Haversine distance sorting | User coordinates and pet coordinates | Nearest pets appear first |
+| BB-10 | Driving distance sorting via Distance Matrix API | User coordinates and pet coordinates | Nearest pets by road distance appear first |
 | BB-11 | Missing GPS permission | User denies location access | Search remains usable and results are shown without distance sorting |
 | BB-12 | Open pet detail and map | Adopter selects an available pet | Pet detail opens and Google Maps marker is shown when coordinates exist |
 | BB-13 | Visual search success | Clear pet reference image | OpenRouter returns JSON attributes and matching pets are shown |

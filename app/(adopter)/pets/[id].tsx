@@ -92,8 +92,15 @@ function PhotoPreviewModal({
 }
 
 export default function PetDetailScreen() {
-  const { id } = useLocalSearchParams<{ id?: string | string[] }>();
+  const { id, from } = useLocalSearchParams<{ id?: string | string[]; from?: string | string[] }>();
   const petId = Array.isArray(id) ? id[0] : id;
+  const fromTab = Array.isArray(from) ? from[0] : from;
+  const handleBack =
+    fromTab === 'search'
+      ? () => router.navigate('/(adopter)/search')
+      : fromTab === 'map'
+        ? () => router.navigate('/(adopter)/map')
+        : undefined;
   const [pet, setPet] = useState<Pet | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -179,11 +186,20 @@ export default function PetDetailScreen() {
   const photos = (pet.photoUrls ?? []).filter((url) => url.trim().length > 0);
   const imageUri = firstPhotoUrl(pet.photoUrls);
   const shouldShowHeroImage = imageUri && !heroImageError;
-  const breedLine = [pet.species, pet.estimatedBreed].filter(Boolean).join(' / ');
+  const sexLabel = pet.sex === 'male' ? 'Jantan' : pet.sex === 'female' ? 'Betina' : 'Tidak diketahui';
+  const detailRows: { label: string; value?: string }[] = [
+    { label: 'Jenis Hewan', value: pet.species },
+    { label: 'Ras', value: pet.estimatedBreed },
+    { label: 'Warna', value: pet.primaryColor },
+    { label: 'Warna Tambahan', value: pet.secondaryColor },
+    { label: 'Pola Bulu', value: pet.furPattern },
+    { label: 'Umur', value: pet.age },
+    { label: 'Kelamin', value: sexLabel },
+  ];
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <BackButton />
+      <BackButton onPress={handleBack} />
       {shouldShowHeroImage ? (
         <Pressable onPress={() => setPreviewIndex(0)} accessibilityRole="button">
           <Image source={{ uri: imageUri }} style={styles.heroImage} resizeMode="cover" onError={() => setHeroImageError(true)} />
@@ -218,14 +234,19 @@ export default function PetDetailScreen() {
 
       <View style={styles.header}>
         <Text style={styles.title}>{pet.name}</Text>
-        <Text style={styles.meta}>{breedLine}</Text>
-        <Text style={styles.meta}>
-          {pet.primaryColor} / {pet.furPattern} / {pet.age}
-        </Text>
+      </View>
+
+      <View style={styles.detailCard}>
+        {detailRows.map((row) => (
+          <View key={row.label} style={styles.detailRow}>
+            <Text style={styles.detailLabel}>{row.label}:</Text>
+            <Text style={styles.detailValue}>{row.value?.trim() ? row.value : '-'}</Text>
+          </View>
+        ))}
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Tentang</Text>
+        <Text style={styles.sectionTitle}>Deskripsi</Text>
         <Text style={styles.description}>
           {pet.description?.trim() || 'Pemilik belum menambahkan deskripsi untuk hewan ini.'}
         </Text>
@@ -300,6 +321,17 @@ const styles = StyleSheet.create({
   header: { gap: 6 },
   title: { color: '#0f172a', fontSize: 30, fontWeight: '900' },
   meta: { color: '#475569', fontSize: 15, lineHeight: 22 },
+  detailCard: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    padding: 14,
+    gap: 8,
+  },
+  detailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  detailLabel: { color: '#475569', fontSize: 14, fontWeight: '700', width: 130 },
+  detailValue: { flex: 1, color: '#0f172a', fontSize: 14, fontWeight: '600', lineHeight: 20 },
   section: { gap: 10 },
   sectionTitle: { color: '#0f172a', fontSize: 18, fontWeight: '800' },
   description: { color: '#334155', fontSize: 15, lineHeight: 23 },
