@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "1004547510309",
+    "project_id": "adoptpet-f5123",
+    "storage_bucket": "adoptpet-f5123.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1004547510309:android:32dcff63a7fb7b294cafcc",
+        "android_client_info": {
+          "package_name": "com.aldiputra44.adoptpet"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1004547510309-qt1a3psit024agt491c1mm2ir0h7i9bi.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKkecpzMn4PwXMWdK6rXP193MN2JUw7H0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1004547510309-qt1a3psit024agt491c1mm2ir0h7i9bi.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1004547510309:android:dc396e5ad4da54354cafcc",
+        "android_client_info": {
+          "package_name": "com.company.adoptpet"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1004547510309-qt1a3psit024agt491c1mm2ir0h7i9bi.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKkecpzMn4PwXMWdK6rXP193MN2JUw7H0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1004547510309-qt1a3psit024agt491c1mm2ir0h7i9bi.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -15,6 +15,17 @@ export async function sendPushToUser(userId: string, title: string, body: string
         title,
         body,
       },
+      data: {
+        title,
+        body,
+      },
+      android: {
+        priority: 'high',
+        notification: {
+          channelId: 'default',
+          sound: 'default',
+        },
+      },
     });
 
     return true;

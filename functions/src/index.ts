@@ -1,6 +1,6 @@
 import * as admin from "firebase-admin";
 import { defineSecret } from "firebase-functions/params";
-import { onDocumentUpdated } from "firebase-functions/v2/firestore";
+import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 
@@ -173,6 +173,33 @@ export const analyzePetImage = onCall(
   },
 );
 
+export const notifyOwnerOnNewAdoptionRequest = onDocumentCreated(
+  { region: "asia-southeast2", document: "adoptionRequests/{requestId}" },
+  async (event) => {
+    const request = event.data?.data();
+
+    if (!request || request.status !== "pending" || !request.ownerId) {
+      return;
+    }
+
+    let petName = "hewan Anda";
+    if (request.petId) {
+      const petSnapshot = await admin
+        .firestore()
+        .collection("pets")
+        .doc(request.petId)
+        .get();
+      petName = petSnapshot.get("name") || petName;
+    }
+
+    await sendPushToUser(
+      request.ownerId,
+      "Pengajuan adopsi baru",
+      `Ada pengajuan baru untuk ${petName}.`,
+    );
+  },
+);
+
 export const createAdoptionApproval = onDocumentUpdated(
   { region: "asia-southeast2", document: "adoptionRequests/{requestId}" },
   async (event) => {
@@ -183,13 +210,22 @@ export const createAdoptionApproval = onDocumentUpdated(
       !before ||
       !after ||
       before.status === after.status ||
-      after.status !== "accepted"
+      !["accepted", "rejected"].includes(after.status)
     ) {
       return;
     }
 
     const firestore = admin.firestore();
     const requestId = event.params.requestId;
+
+    if (after.status === "rejected") {
+      await sendPushToUser(
+        after.adopterId,
+        "Adopsi ditolak",
+        "Pengajuan adopsi Anda belum disetujui oleh pelepas hewan.",
+      );
+      return;
+    }
     const approvedAt = toDate(after.decidedAt) ?? new Date();
     const dueAt = admin.firestore.Timestamp.fromDate(addOneMonth(approvedAt));
 

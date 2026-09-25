@@ -8,10 +8,12 @@ import {
 } from '@expo-google-fonts/poppins';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { AuthProvider } from '@/contexts/auth-context';
 import { FONT_EXTRABOLD, patchTextDefaults } from '@/lib/theme/fonts';
+import { configureNotifications } from '@/lib/firebase/notifications';
 
 export default function RootLayout() {
   const [loaded] = useFonts({
@@ -25,6 +27,10 @@ export default function RootLayout() {
   if (loaded) {
     patchTextDefaults();
   }
+
+  useEffect(() => {
+    void configureNotifications();
+  }, []);
 
   if (!loaded) return null;
 

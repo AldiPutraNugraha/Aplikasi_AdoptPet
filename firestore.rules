@@ -97,6 +97,7 @@ service cloud.firestore {
           'fullAddress',
           'coordinates',
           'fcmToken',
+          'fcmTokenType',
           'updatedAt'
         ])
         && (
